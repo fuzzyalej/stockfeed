@@ -1,8 +1,7 @@
-"""Example 5 — Async data fetching.
+"""Example 5 — Async data fetching with AsyncStockFeedClient.
 
 Fetches OHLCV bars for multiple tickers concurrently using asyncio.
-yfinance is synchronous under the hood; async_get_ohlcv uses
-asyncio.to_thread so it doesn't block the event loop.
+Provider selection is automatic — yfinance is used by default.
 
 Run:
     python examples/05_async.py
@@ -11,10 +10,10 @@ Run:
 import asyncio
 from datetime import datetime, timezone
 
+from stockfeed import AsyncStockFeedClient
 from stockfeed.models.interval import Interval
-from stockfeed.providers.yfinance.provider import YFinanceProvider
 
-provider = YFinanceProvider()
+client = AsyncStockFeedClient()
 
 TICKERS = ["AAPL", "MSFT", "GOOGL", "AMZN"]
 START = datetime(2024, 6, 1, tzinfo=timezone.utc)
@@ -22,7 +21,7 @@ END = datetime(2024, 6, 30, tzinfo=timezone.utc)
 
 
 async def fetch(ticker: str) -> tuple[str, int]:
-    bars = await provider.async_get_ohlcv(ticker, Interval.ONE_DAY, START, END)
+    bars = await client.get_ohlcv(ticker, Interval.ONE_DAY, START, END)
     return ticker, len(bars)
 
 
