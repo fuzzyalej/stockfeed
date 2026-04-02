@@ -1,3 +1,6 @@
 .env
-docs/plans/
+.mcp.json
+.opencode.json
 .worktrees/
+.cursor/
+docs/plans/
