@@ -1,0 +1,19 @@
+{
+  "ticker": "AAPL",
+  "info": {
+    "symbol": "AAPL",
+    "longName": "Apple Inc.",
+    "currentPrice": 188.32,
+    "bid": 188.30,
+    "ask": 188.35,
+    "bidSize": 100,
+    "askSize": 200,
+    "volume": 59144100,
+    "open": 182.09,
+    "dayHigh": 188.44,
+    "dayLow": 181.92,
+    "previousClose": 181.18,
+    "exchange": "NMS",
+    "currency": "USD"
+  }
+}

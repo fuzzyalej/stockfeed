@@ -1,6 +1,5 @@
 """Unit tests for the exception hierarchy."""
 
-
 from stockfeed.exceptions import (
     CacheError,
     CacheReadError,
@@ -27,9 +26,7 @@ class TestExceptionHierarchy:
         assert err.suggestion is None
 
     def test_str_includes_all_fields(self) -> None:
-        err = StockFeedError(
-            "Oops", provider="tiingo", ticker="AAPL", suggestion="Try again later"
-        )
+        err = StockFeedError("Oops", provider="tiingo", ticker="AAPL", suggestion="Try again later")
         s = str(err)
         assert "Oops" in s
         assert "tiingo" in s

@@ -1,6 +1,5 @@
 """Unit tests for DuckDB schema migration runner."""
 
-
 from stockfeed.cache.connection import close_connection, get_connection
 from stockfeed.cache.schema import run_migrations
 
