@@ -24,7 +24,7 @@ for _cls in [
     TradierProvider,
     CoingeckoProvider,
 ]:
-    _registry.register(_cls)  # type: ignore[type-abstract]
+    _registry.register(_cls)  # type: ignore[arg-type]
 
 __all__ = [
     "AbstractProvider",

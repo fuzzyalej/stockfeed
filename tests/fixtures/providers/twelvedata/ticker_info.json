@@ -1,0 +1,4 @@
+{
+  "ticker": "AAPL",
+  "data": {"name": "Apple Inc", "exchange": "NASDAQ", "currency": "USD", "country": "United States", "sector": "Technology", "industry": "Consumer Electronics", "website": "https://www.apple.com", "description": "Apple Inc. designs, manufactures, and markets smartphones, personal computers, tablets, wearables, and accessories worldwide."}
+}

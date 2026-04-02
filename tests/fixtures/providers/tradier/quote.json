@@ -1,0 +1,4 @@
+{
+  "ticker": "AAPL",
+  "data": {"quotes": {"quote": {"symbol": "AAPL", "last": 188.32, "bid": 188.30, "ask": 188.35, "bidsize": 100, "asksize": 200, "volume": 59144100, "open": 182.09, "high": 188.44, "low": 181.92, "prevclose": 181.18}}}
+}

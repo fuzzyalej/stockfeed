@@ -1,0 +1,5 @@
+{
+  "ticker": "AAPL",
+  "price_data": {"price": "188.32"},
+  "quote_data": {"open": "182.09", "high": "188.44", "low": "181.92", "close": "188.32", "previous_close": "181.18", "volume": "59144100"}
+}

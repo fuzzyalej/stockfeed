@@ -1,0 +1,4 @@
+{
+  "ticker": "AAPL",
+  "data": [{"last": 188.32, "bidPrice": 188.30, "askPrice": 188.35, "bidSize": 100, "askSize": 200, "volume": 59144100, "open": 182.09, "high": 188.44, "low": 181.92, "prevClose": 181.18}]
+}

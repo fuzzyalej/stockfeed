@@ -282,7 +282,11 @@ def test_provider_contract_instantiates(provider_class: type) -> None:
     assert isinstance(p.requires_auth, bool)
 
 
-@pytest.mark.parametrize("provider_class", ALL_PROVIDERS[1:])  # skip yfinance
+# Only providers that are still stubs (not yet implemented)
+_STUB_PROVIDERS = [CoingeckoProvider]
+
+
+@pytest.mark.parametrize("provider_class", _STUB_PROVIDERS)
 def test_stub_providers_raise_not_implemented(provider_class: type) -> None:
     """Stub providers must raise NotImplementedError (not crash) on method calls."""
     p = provider_class()
