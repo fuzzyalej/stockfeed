@@ -1,1 +1,3 @@
-# Normalizer package — populated in Phase 2
+from stockfeed.normalizer.base import BaseNormalizer
+
+__all__ = ["BaseNormalizer"]

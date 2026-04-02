@@ -1,0 +1,11 @@
+{
+  "ticker": "AAPL",
+  "interval": "1d",
+  "rows": [
+    {"timestamp": "2024-01-02T00:00:00+00:00", "open": 185.01, "high": 185.83, "low": 182.15, "close": 185.20, "close_adj": 185.10, "volume": 82488700},
+    {"timestamp": "2024-01-03T00:00:00+00:00", "open": 183.92, "high": 185.15, "low": 183.62, "close": 184.25, "close_adj": 184.15, "volume": 58414500},
+    {"timestamp": "2024-01-04T00:00:00+00:00", "open": 182.15, "high": 183.10, "low": 180.63, "close": 181.91, "close_adj": 181.81, "volume": 71983600},
+    {"timestamp": "2024-01-05T00:00:00+00:00", "open": 181.99, "high": 182.76, "low": 180.17, "close": 181.18, "close_adj": 181.08, "volume": 62303400},
+    {"timestamp": "2024-01-08T00:00:00+00:00", "open": 182.09, "high": 188.44, "low": 181.92, "close": 188.32, "close_adj": 188.22, "volume": 59144100}
+  ]
+}

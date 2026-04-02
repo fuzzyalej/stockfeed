@@ -1,0 +1,13 @@
+{
+  "ticker": "AAPL",
+  "info": {
+    "symbol": "AAPL",
+    "longName": "Apple Inc.",
+    "exchange": "NMS",
+    "currency": "USD",
+    "country": "United States",
+    "sector": "Technology",
+    "industry": "Consumer Electronics",
+    "marketCap": 2900000000000
+  }
+}

@@ -1,6 +1,5 @@
 """Unit tests for StockFeedSettings."""
 
-
 from stockfeed.config import StockFeedSettings
 
 
