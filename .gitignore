@@ -4,3 +4,7 @@
 .worktrees/
 .cursor/
 docs/plans/
+*.pyc
+__pycache__/
+.venv/
+.coverage
