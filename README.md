@@ -28,50 +28,126 @@ pip install "stockfeed[streaming]"   # SSE streaming support
 
 ## Quick start
 
+### OHLCV bars (yfinance — no API key needed)
+
 ```python
 from datetime import datetime, timezone
-from stockfeed import StockFeedClient, Interval
+from stockfeed.models.interval import Interval
+from stockfeed.providers.yfinance.provider import YFinanceProvider
 
-client = StockFeedClient()
+provider = YFinanceProvider()
 
-# Daily OHLCV bars for Apple
-bars = client.get_ohlcv(
+bars = provider.get_ohlcv(
     "AAPL",
     Interval.ONE_DAY,
     start=datetime(2024, 1, 1, tzinfo=timezone.utc),
-    end=datetime(2024, 3, 31, tzinfo=timezone.utc),
+    end=datetime(2024, 1, 31, tzinfo=timezone.utc),
 )
 
-print(bars[0])
-# OHLCVBar(ticker='AAPL', timestamp=..., open=182.15, close_raw=185.20, close_adj=185.20, ...)
+for bar in bars:
+    print(bar.timestamp.date(), bar.close_raw, bar.close_adj)
+# 2024-01-02  185.64  183.73
+# 2024-01-03  184.25  182.36
+# ...
+```
 
-# Latest quote
-quote = client.get_quote("AAPL")
+### Quote and company info
+
+```python
+from stockfeed.providers.yfinance.provider import YFinanceProvider
+
+provider = YFinanceProvider()
+
+quote = provider.get_quote("MSFT")
 print(quote.last, quote.bid, quote.ask)
 
-# Company info
-info = client.get_ticker_info("AAPL")
+info = provider.get_ticker_info("MSFT")
 print(info.name, info.sector, info.market_cap)
 ```
 
-### Async usage
+### Cache-first access
+
+```python
+from stockfeed.cache.manager import CacheManager
+from stockfeed.models.interval import Interval
+from stockfeed.providers.yfinance.provider import YFinanceProvider
+from datetime import datetime, timezone
+
+cache = CacheManager()          # default: ~/.stockfeed/cache.db
+provider = YFinanceProvider()
+
+start = datetime(2024, 1, 1, tzinfo=timezone.utc)
+end   = datetime(2024, 3, 31, tzinfo=timezone.utc)
+
+# First call: miss → fetch → store
+bars = cache.read("AAPL", Interval.ONE_DAY, start, end)
+if bars is None:
+    bars = provider.get_ohlcv("AAPL", Interval.ONE_DAY, start, end)
+    cache.write(bars)
+
+# Second call: hit → DuckDB only, no network
+bars = cache.read("AAPL", Interval.ONE_DAY, bars[0].timestamp, bars[-1].timestamp)
+```
+
+### Async — fetch multiple tickers concurrently
 
 ```python
 import asyncio
-from stockfeed import AsyncStockFeedClient, Interval
 from datetime import datetime, timezone
+from stockfeed.models.interval import Interval
+from stockfeed.providers.yfinance.provider import YFinanceProvider
+
+provider = YFinanceProvider()
 
 async def main():
-    client = AsyncStockFeedClient()
-    bars = await client.get_ohlcv(
-        "MSFT",
-        Interval.ONE_HOUR,
-        start=datetime(2024, 6, 1, tzinfo=timezone.utc),
-        end=datetime(2024, 6, 30, tzinfo=timezone.utc),
-    )
-    print(f"{len(bars)} bars fetched")
+    tasks = [
+        provider.async_get_ohlcv(t, Interval.ONE_DAY,
+            datetime(2024, 6, 1, tzinfo=timezone.utc),
+            datetime(2024, 6, 30, tzinfo=timezone.utc))
+        for t in ["AAPL", "MSFT", "GOOGL", "AMZN"]
+    ]
+    results = await asyncio.gather(*tasks)
+    for bars in results:
+        print(bars[0].ticker, len(bars), "bars")
 
 asyncio.run(main())
+```
+
+### Using a paid provider (Tiingo)
+
+```python
+from stockfeed.providers.tiingo.provider import TiingoProvider
+from stockfeed.exceptions import ProviderAuthError, TickerNotFoundError
+from stockfeed.models.interval import Interval
+from datetime import datetime, timezone
+
+provider = TiingoProvider(api_key="your_tiingo_key")
+# Or set STOCKFEED_TIINGO_API_KEY in env / .env and read via StockFeedSettings
+
+try:
+    bars = provider.get_ohlcv("SPY", Interval.ONE_DAY,
+        start=datetime(2024, 1, 1, tzinfo=timezone.utc),
+        end=datetime(2024, 1, 10, tzinfo=timezone.utc))
+except ProviderAuthError:
+    print("Check your API key")
+except TickerNotFoundError as e:
+    print(f"{e.ticker} not found on {e.provider}")
+```
+
+### Cache management CLI
+
+```bash
+# Stats
+python -m stockfeed.cache stats
+
+# Clear one ticker
+python -m stockfeed.cache clear --ticker AAPL
+
+# Export to Parquet
+python -m stockfeed.cache export --format parquet --output ./data/
+
+# Inspect rows
+python -m stockfeed.cache inspect --ticker AAPL --interval 1d
 ```
 
 ## Configuration
@@ -141,12 +217,17 @@ Providers without API keys configured are skipped during selection. yfinance is 
 All exceptions inherit from `StockFeedError` and carry structured context:
 
 ```python
-from stockfeed import StockFeedClient, TickerNotFoundError, ProviderUnavailableError
+from stockfeed.providers.yfinance.provider import YFinanceProvider
+from stockfeed.exceptions import TickerNotFoundError, ProviderUnavailableError
+from stockfeed.models.interval import Interval
+from datetime import datetime, timezone
 
-client = StockFeedClient()
+provider = YFinanceProvider()
 
 try:
-    bars = client.get_ohlcv("INVALID", ...)
+    bars = provider.get_ohlcv("INVALID", Interval.ONE_DAY,
+        datetime(2024, 1, 1, tzinfo=timezone.utc),
+        datetime(2024, 1, 31, tzinfo=timezone.utc))
 except TickerNotFoundError as e:
     print(e.ticker, e.provider, e.suggestion)
 except ProviderUnavailableError as e:
@@ -183,17 +264,36 @@ mypy src/                   # type check
 pytest                      # tests
 ```
 
+## Examples
+
+Working examples are in the [`examples/`](examples/) directory:
+
+| File | What it shows |
+|---|---|
+| `01_ohlcv_yfinance.py` | Daily OHLCV bars with yfinance (no key needed) |
+| `02_quote_and_ticker_info.py` | Live quote and company info |
+| `03_cache.py` | Cache-first access — miss, write, hit, stats |
+| `04_provider_health.py` | Registry inspection and health check |
+| `05_async.py` | Concurrent fetching with `asyncio.gather` |
+| `06_paid_provider.py` | Tiingo with auth and error handling |
+
+Run any example after installing the library:
+
+```bash
+pip install -e ".[dev]"
+python examples/01_ohlcv_yfinance.py
+```
+
 ## Project status
 
 | Phase | Description | Status |
 |---|---|---|
 | 1 | Project scaffold, models, config, exceptions, cache schema | Done |
 | 2 | Provider abstraction layer, yfinance implementation, stub providers | Done |
-| 3 | Cache layer (DuckDB read/write, partial hit detection) | Planned |
-| 4 | HTTP providers (Tiingo, Finnhub, Twelve Data, Alpaca, Tradier, CoinGecko) | Planned |
-| 5 | Sync & async clients, failover logic | Planned |
-| 6 | SSE streaming | Planned |
-| 7 | Dev mode, CLI, MkDocs | Planned |
+| 3 | Cache layer + HTTP providers (Tiingo, Finnhub, Twelve Data, Alpaca, Tradier) | Done |
+| 4 | Sync & async clients, failover logic | Planned |
+| 5 | SSE streaming | Planned |
+| 6 | Dev mode, CLI, MkDocs | Planned |
 
 ## License
 
