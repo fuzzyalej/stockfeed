@@ -126,8 +126,25 @@ class ProviderSelector:
         return bool(key_map.get(provider_name))
 
     def _instantiate(self, cls: type[AbstractProvider]) -> AbstractProvider | None:
-        """Instantiate a provider class, returning None on failure."""
+        """Instantiate a provider class with credentials from settings."""
+        name = cls.name
+        s = self._settings
         try:
+            if name == "tiingo":
+                return cls(api_key=getattr(s, "tiingo_api_key", "") or "")  # type: ignore[call-arg]
+            if name == "finnhub":
+                return cls(api_key=getattr(s, "finnhub_api_key", "") or "")  # type: ignore[call-arg]
+            if name == "twelvedata":
+                return cls(api_key=getattr(s, "twelvedata_api_key", "") or "")  # type: ignore[call-arg]
+            if name == "alpaca":
+                return cls(  # type: ignore[call-arg]
+                    api_key=getattr(s, "alpaca_api_key", "") or "",
+                    secret_key=getattr(s, "alpaca_secret_key", "") or "",
+                )
+            if name == "tradier":
+                return cls(api_key=getattr(s, "tradier_api_key", "") or "")  # type: ignore[call-arg]
+            if name == "coingecko":
+                return cls(api_key=getattr(s, "coingecko_api_key", "") or "")  # type: ignore[call-arg]
             return cls()
         except Exception:
             return None

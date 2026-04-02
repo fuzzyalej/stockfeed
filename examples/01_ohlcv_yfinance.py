@@ -1,18 +1,19 @@
-"""Example 1 — Fetch daily OHLCV bars from yfinance.
+"""Example 1 — Fetch daily OHLCV bars using StockFeedClient.
 
-yfinance requires no API key and is always available.
+No API key needed — yfinance is always available as the default provider.
+
 Run:
     python examples/01_ohlcv_yfinance.py
 """
 
 from datetime import datetime, timezone
 
+from stockfeed import StockFeedClient
 from stockfeed.models.interval import Interval
-from stockfeed.providers.yfinance.provider import YFinanceProvider
 
-provider = YFinanceProvider()
+client = StockFeedClient()
 
-bars = provider.get_ohlcv(
+bars = client.get_ohlcv(
     "AAPL",
     Interval.ONE_DAY,
     start=datetime(2024, 1, 1, tzinfo=timezone.utc),
