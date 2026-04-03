@@ -2,7 +2,7 @@
 
 [![PyPI version](https://img.shields.io/pypi/v/stockfeed.svg)](https://pypi.org/project/stockfeed/)
 [![Python versions](https://img.shields.io/pypi/pyversions/stockfeed.svg)](https://pypi.org/project/stockfeed/)
-[![Coverage](https://img.shields.io/badge/coverage-91%25-brightgreen.svg)](https://github.com/your-org/stockfeed)
+[![Coverage](https://img.shields.io/badge/coverage-91%25-brightgreen.svg)](https://github.com/fuzzyalej/stockfeed)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 Unified market data access for Python — stocks, futures, options, and crypto.
@@ -247,7 +247,7 @@ Working examples are in [`examples/`](examples/):
 ## Development
 
 ```bash
-git clone https://github.com/your-org/stockfeed
+git clone https://github.com/fuzzyalej/stockfeed
 cd stockfeed
 uv sync
 ```

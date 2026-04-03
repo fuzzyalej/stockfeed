@@ -5,7 +5,7 @@ Thank you for your interest in contributing! This guide covers everything you ne
 ## Development setup
 
 ```bash
-git clone https://github.com/your-org/stockfeed
+git clone https://github.com/fuzzyalej/stockfeed
 cd stockfeed
 uv sync          # installs all dev dependencies
 ```
@@ -152,7 +152,7 @@ myprovider = "mypkg.provider:MyProvider"
 
 ## Reporting bugs
 
-Open an issue at [github.com/your-org/stockfeed/issues](https://github.com/your-org/stockfeed/issues) with:
+Open an issue at [github.com/fuzzyalej/stockfeed/issues](https://github.com/fuzzyalej/stockfeed/issues) with:
 
 - `stockfeed` version (`pip show stockfeed`)
 - Python version

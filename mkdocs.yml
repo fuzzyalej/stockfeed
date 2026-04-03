@@ -1,8 +1,8 @@
 site_name: stockfeed
 site_description: Unified market data access for Python — stocks, futures, options, and crypto.
-site_url: https://your-org.github.io/stockfeed/
-repo_url: https://github.com/your-org/stockfeed
-repo_name: your-org/stockfeed
+site_url: https://fuzzyalej.github.io/stockfeed/
+repo_url: https://github.com/fuzzyalej/stockfeed
+repo_name: fuzzyalej/stockfeed
 edit_uri: edit/main/docs/
 
 theme:

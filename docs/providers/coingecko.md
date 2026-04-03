@@ -3,7 +3,7 @@
 !!! warning "Coming soon"
     CoinGecko support is planned for the crypto phase. All methods currently raise `NotImplementedError`.
 
-    Track progress at [github.com/your-org/stockfeed](https://github.com/your-org/stockfeed).
+    Track progress at [github.com/fuzzyalej/stockfeed](https://github.com/fuzzyalej/stockfeed).
 
 ## Planned setup
 
