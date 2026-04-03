@@ -138,6 +138,23 @@ class TestYFinanceNormalizer:
         with pytest.raises(ValidationError):
             self.normalizer.normalize_ticker_info(({}, "AAPL"))
 
+    def test_normalize_ohlcv_nan_volume_defaults_to_zero(self) -> None:
+        """yfinance may return NaN for Volume on some bars; should default to 0."""
+        import numpy as np
+
+        df = pd.DataFrame(
+            {
+                "Open": [185.0],
+                "High": [186.0],
+                "Low": [184.0],
+                "Close": [185.5],
+                "Volume": [np.nan],
+            },
+            index=pd.DatetimeIndex([pd.Timestamp("2024-01-02", tz="UTC")]),
+        )
+        bars = self.normalizer.normalize_ohlcv((df, pd.DataFrame(), "AAPL", Interval.ONE_DAY))
+        assert bars[0].volume == 0
+
 
 # ---------------------------------------------------------------------------
 # YFinanceProvider contract tests

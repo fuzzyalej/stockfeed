@@ -301,3 +301,29 @@ class TestTwelvedataNormalizerAdditional:
         # ISO with Z
         dt2 = _parse_dt("2024-01-02T09:30:00+00:00")
         assert dt2.tzinfo == timezone.utc
+
+    def test_normalize_ohlcv_missing_volume_defaults_to_zero(self) -> None:
+        """Twelvedata omits 'volume' for some bars; should default to 0."""
+        row = {
+            "datetime": "2024-01-02 09:30:00",
+            "open": "185.0",
+            "high": "186.0",
+            "low": "184.0",
+            "close": "185.5",
+            # intentionally no 'volume' key
+        }
+        bars = self.n.normalize_ohlcv(({"values": [row]}, "AAPL", Interval.ONE_DAY))
+        assert bars[0].volume == 0
+
+    def test_normalize_ohlcv_null_volume_defaults_to_zero(self) -> None:
+        """Twelvedata may return null for volume; should default to 0."""
+        row = {
+            "datetime": "2024-01-02 09:30:00",
+            "open": "185.0",
+            "high": "186.0",
+            "low": "184.0",
+            "close": "185.5",
+            "volume": None,
+        }
+        bars = self.n.normalize_ohlcv(({"values": [row]}, "AAPL", Interval.ONE_DAY))
+        assert bars[0].volume == 0

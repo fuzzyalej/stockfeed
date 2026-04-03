@@ -267,3 +267,29 @@ class TestAlpacaNormalizerAdditional:
         from stockfeed.providers.alpaca.normalizer import _dec
 
         assert _dec("bad") is None
+
+    def test_normalize_ohlcv_missing_volume_defaults_to_zero(self) -> None:
+        """Alpaca omits 'v' for some bars; should default to 0."""
+        row = {
+            "t": "2024-01-02T09:30:00Z",
+            "o": "185.0",
+            "h": "186.0",
+            "l": "184.0",
+            "c": "185.5",
+            # intentionally no 'v' key
+        }
+        bars = self.n.normalize_ohlcv(([row], "AAPL", Interval.ONE_DAY))
+        assert bars[0].volume == 0
+
+    def test_normalize_ohlcv_null_volume_defaults_to_zero(self) -> None:
+        """Alpaca may return null for volume; should default to 0."""
+        row = {
+            "t": "2024-01-02T09:30:00Z",
+            "o": "185.0",
+            "h": "186.0",
+            "l": "184.0",
+            "c": "185.5",
+            "v": None,
+        }
+        bars = self.n.normalize_ohlcv(([row], "AAPL", Interval.ONE_DAY))
+        assert bars[0].volume == 0

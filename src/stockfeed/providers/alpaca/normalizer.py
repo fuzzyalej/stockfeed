@@ -70,7 +70,7 @@ class AlpacaNormalizer(BaseNormalizer):
                     low=Decimal(str(row["l"])),
                     close_raw=Decimal(str(row["c"])),
                     close_adj=None,
-                    volume=int(row["v"]),
+                    volume=int(row.get("v") or 0),
                     vwap=vwap,
                     trade_count=int(trade_count) if trade_count is not None else None,
                     provider="alpaca",
