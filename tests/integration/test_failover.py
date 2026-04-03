@@ -151,6 +151,28 @@ class TestFailoverChain:
         # Fallback must NOT have been called
         fallback.get_ohlcv.assert_not_called()
 
+    def test_provider_unavailable_error_from_400_causes_failover(self, tmp_path: object) -> None:
+        """ProviderUnavailableError (mapped from HTTP 400) triggers failover."""
+        settings = _settings(tmp_path)
+        client = StockFeedClient(settings=settings)
+
+        bars = [_make_bar()]
+        unavailable = MagicMock()
+        unavailable.name = "tradier"
+        unavailable.get_ohlcv.side_effect = ProviderUnavailableError(
+            "Tradier HTTP 400 (no market data)", provider="tradier"
+        )
+
+        fallback = MagicMock()
+        fallback.name = "yfinance"
+        fallback.get_ohlcv.return_value = bars
+
+        with patch.object(client._selector, "select", return_value=[unavailable, fallback]):
+            result = client.get_ohlcv("GME", "1m", "2024-01-02", "2024-01-03")
+
+        assert len(result) == 1
+        fallback.get_ohlcv.assert_called_once()
+
 
 # ---------------------------------------------------------------------------
 # Market hours cache bypass

@@ -72,7 +72,7 @@ class TiingoNormalizer(BaseNormalizer):
                     low=Decimal(str(row["low"])),
                     close_raw=Decimal(str(row["close"])),
                     close_adj=close_adj_val,
-                    volume=int(row["volume"]),
+                    volume=int(row.get("volume") or 0),
                     vwap=None,
                     trade_count=None,
                     provider="tiingo",

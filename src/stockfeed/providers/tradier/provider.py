@@ -61,6 +61,12 @@ def _raise_for_status(
             ticker=ticker,
             suggestion="Wait before retrying.",
         )
+    if resp.status_code == 400:
+        raise ProviderUnavailableError(
+            "Tradier bad request (HTTP 400) — no market data for the requested range",
+            provider=provider,
+            ticker=ticker,
+        )
     if resp.status_code >= 500:
         raise ProviderUnavailableError(
             f"Tradier server error (HTTP {resp.status_code})",

@@ -100,7 +100,7 @@ class YFinanceNormalizer(BaseNormalizer):
                     low=Decimal(str(row["Low"])),
                     close_raw=Decimal(str(row["Close"])),
                     close_adj=close_adj,
-                    volume=int(row["Volume"]),
+                    volume=int(row["Volume"]) if pd.notna(row["Volume"]) else 0,
                     vwap=None,
                     trade_count=None,
                     provider="yfinance",

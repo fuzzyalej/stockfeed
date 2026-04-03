@@ -11,7 +11,12 @@ import httpx
 import pytest
 import respx
 
-from stockfeed.exceptions import ProviderAuthError, TickerNotFoundError, ValidationError
+from stockfeed.exceptions import (
+    ProviderAuthError,
+    ProviderUnavailableError,
+    TickerNotFoundError,
+    ValidationError,
+)
 from stockfeed.models.interval import Interval
 from stockfeed.models.ohlcv import OHLCVBar
 from stockfeed.providers.tradier.normalizer import TradierNormalizer
@@ -257,6 +262,34 @@ class TestTradierNormalizerAdditional:
         bars = self.n.normalize_ohlcv((data, "AAPL", Interval.ONE_DAY, False))
         assert len(bars) == 1
 
+    def test_normalize_ohlcv_daily_missing_volume_defaults_to_zero(self) -> None:
+        """Tradier daily path omits 'volume' for some bars; should default to 0."""
+        row = {
+            "date": "2024-01-02",
+            "open": "185",
+            "high": "186",
+            "low": "184",
+            "close": "185.5",
+            # intentionally no 'volume' key
+        }
+        data = {"history": {"day": [row]}}
+        bars = self.n.normalize_ohlcv((data, "AAPL", Interval.ONE_DAY, False))
+        assert bars[0].volume == 0
+
+    def test_normalize_ohlcv_daily_null_volume_defaults_to_zero(self) -> None:
+        """Tradier daily path may return null for volume; should default to 0."""
+        row = {
+            "date": "2024-01-02",
+            "open": "185",
+            "high": "186",
+            "low": "184",
+            "close": "185.5",
+            "volume": None,
+        }
+        data = {"history": {"day": [row]}}
+        bars = self.n.normalize_ohlcv((data, "AAPL", Interval.ONE_DAY, False))
+        assert bars[0].volume == 0
+
     def test_normalize_quote_invalid_raw_raises(self) -> None:
         from stockfeed.exceptions import ValidationError
 
@@ -313,3 +346,52 @@ class TestTradierNormalizerAdditional:
 
         dt = _parse_dt("2024-01-02T09:30:00+00:00")
         assert dt.tzinfo == timezone.utc
+
+    def test_normalize_ohlcv_intraday_missing_volume_defaults_to_zero(self) -> None:
+        """Tradier intraday omits 'volume' for illiquid/pre-market bars; should default to 0."""
+        row = {
+            "time": "2024-01-02 09:30:00",
+            "open": "185",
+            "high": "186",
+            "low": "184",
+            "close": "185.5",
+            # intentionally no 'volume' key
+        }
+        data = {"series": {"data": [row]}}
+        bars = self.n.normalize_ohlcv((data, "AAPL", Interval.ONE_MINUTE, True))
+        assert bars[0].volume == 0
+
+    def test_normalize_ohlcv_intraday_null_volume_defaults_to_zero(self) -> None:
+        """Tradier may return null for volume; should default to 0."""
+        row = {
+            "time": "2024-01-02 09:30:00",
+            "open": "185",
+            "high": "186",
+            "low": "184",
+            "close": "185.5",
+            "volume": None,
+        }
+        data = {"series": {"data": [row]}}
+        bars = self.n.normalize_ohlcv((data, "AAPL", Interval.ONE_MINUTE, True))
+        assert bars[0].volume == 0
+
+
+class TestTradierRaiseForStatus:
+    """Tests for _raise_for_status HTTP error mapping."""
+
+    def setup_method(self) -> None:
+        self.provider = TradierProvider(api_key="test-key")
+
+    def test_get_ohlcv_400_raises_unavailable_error(self) -> None:
+        """HTTP 400 (e.g. no market data for time range) should raise ProviderUnavailableError."""
+        with respx.mock:
+            respx.get("https://api.tradier.com/v1/markets/timesales").mock(
+                return_value=httpx.Response(400)
+            )
+            with pytest.raises(ProviderUnavailableError):
+                self.provider.get_ohlcv(
+                    "GME",
+                    Interval.ONE_MINUTE,
+                    datetime(2024, 1, 2, 8, 0, tzinfo=timezone.utc),
+                    datetime(2024, 1, 2, 12, 0, tzinfo=timezone.utc),
+                )

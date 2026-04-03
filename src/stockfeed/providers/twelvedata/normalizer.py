@@ -91,7 +91,7 @@ class TwelvedataNormalizer(BaseNormalizer):
                     low=Decimal(str(row["low"])),
                     close_raw=Decimal(str(row["close"])),
                     close_adj=None,
-                    volume=int(row["volume"]),
+                    volume=int(row.get("volume") or 0),
                     vwap=None,
                     trade_count=None,
                     provider="twelvedata",

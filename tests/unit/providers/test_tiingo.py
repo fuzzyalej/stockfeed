@@ -264,3 +264,29 @@ class TestTiingoNormalizerAdditional:
         info = self.n.normalize_ticker_info((fixture, "AAPL"))
         assert info.ticker == "AAPL"
         assert info.provider == "tiingo"
+
+    def test_normalize_ohlcv_missing_volume_defaults_to_zero(self) -> None:
+        """Tiingo IEX omits 'volume' for pre/post-market bars; should default to 0."""
+        row = {
+            "date": "2024-01-02T00:00:00+00:00",
+            "open": "185.0",
+            "high": "186.0",
+            "low": "184.0",
+            "close": "185.5",
+            # intentionally no 'volume' key
+        }
+        bars = self.n.normalize_ohlcv(([row], "AAPL", Interval.ONE_DAY))
+        assert bars[0].volume == 0
+
+    def test_normalize_ohlcv_null_volume_defaults_to_zero(self) -> None:
+        """Tiingo may return null for volume; should default to 0."""
+        row = {
+            "date": "2024-01-02T00:00:00+00:00",
+            "open": "185.0",
+            "high": "186.0",
+            "low": "184.0",
+            "close": "185.5",
+            "volume": None,
+        }
+        bars = self.n.normalize_ohlcv(([row], "AAPL", Interval.ONE_DAY))
+        assert bars[0].volume == 0
