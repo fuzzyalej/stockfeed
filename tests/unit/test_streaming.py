@@ -44,9 +44,7 @@ class TestStreamQuote:
         client = _make_client([q1, q2, q2])
 
         with patch("stockfeed.streaming.sse.asyncio.sleep", new_callable=AsyncMock):
-            results = await _collect(
-                stream_quote("AAPL", client, interval=0.0), 2
-            )
+            results = await _collect(stream_quote("AAPL", client, interval=0.0), 2)
 
         assert results == [q1, q2]
 
@@ -55,35 +53,39 @@ class TestStreamQuote:
         client = _make_client([q, q])
 
         with patch("stockfeed.streaming.sse.asyncio.sleep", new_callable=AsyncMock):
-            await _collect(
-                stream_quote("AAPL", client, interval=0.0, provider="tiingo"), 1
-            )
+            await _collect(stream_quote("AAPL", client, interval=0.0, provider="tiingo"), 1)
 
         client.get_quote.assert_called_with("AAPL", provider="tiingo")
 
     async def test_auth_error_propagates_immediately(self) -> None:
         client = _make_client([ProviderAuthError("bad key", provider="p1")])
 
-        with pytest.raises(ProviderAuthError), patch("stockfeed.streaming.sse.asyncio.sleep", new_callable=AsyncMock):
+        with (
+            pytest.raises(ProviderAuthError),
+            patch("stockfeed.streaming.sse.asyncio.sleep", new_callable=AsyncMock),
+        ):
             await _collect(stream_quote("AAPL", client, interval=0.0), 1)
 
     async def test_ticker_not_found_propagates_immediately(self) -> None:
         client = _make_client([TickerNotFoundError("nope", ticker="FAKE")])
 
-        with pytest.raises(TickerNotFoundError), patch("stockfeed.streaming.sse.asyncio.sleep", new_callable=AsyncMock):
+        with (
+            pytest.raises(TickerNotFoundError),
+            patch("stockfeed.streaming.sse.asyncio.sleep", new_callable=AsyncMock),
+        ):
             await _collect(stream_quote("AAPL", client, interval=0.0), 1)
 
     async def test_transient_error_retries(self) -> None:
         q = _make_quote()
-        client = _make_client([
-            ProviderUnavailableError("down", provider="p1"),
-            q,
-        ])
+        client = _make_client(
+            [
+                ProviderUnavailableError("down", provider="p1"),
+                q,
+            ]
+        )
 
         with patch("stockfeed.streaming.sse.asyncio.sleep", new_callable=AsyncMock):
-            results = await _collect(
-                stream_quote("AAPL", client, interval=0.0), 1
-            )
+            results = await _collect(stream_quote("AAPL", client, interval=0.0), 1)
 
         assert results == [q]
 
@@ -98,9 +100,7 @@ class TestStreamQuote:
             sleep_calls.append(secs)
 
         with patch("stockfeed.streaming.sse.asyncio.sleep", side_effect=_fake_sleep):
-            results = await _collect(
-                stream_quote("AAPL", client, interval=1.0), 1
-            )
+            results = await _collect(stream_quote("AAPL", client, interval=1.0), 1)
 
         assert results == [q]
         # Should have slept with retry_after value, not interval
@@ -110,10 +110,11 @@ class TestStreamQuote:
         errors = [ProviderUnavailableError("down", provider="p1")] * 5
         client = _make_client(errors)
 
-        with pytest.raises(ProviderUnavailableError), patch("stockfeed.streaming.sse.asyncio.sleep", new_callable=AsyncMock):
-            await _collect(
-                stream_quote("AAPL", client, interval=0.0, max_errors=5), 1
-            )
+        with (
+            pytest.raises(ProviderUnavailableError),
+            patch("stockfeed.streaming.sse.asyncio.sleep", new_callable=AsyncMock),
+        ):
+            await _collect(stream_quote("AAPL", client, interval=0.0, max_errors=5), 1)
 
     async def test_sleep_called_with_interval(self) -> None:
         q1, q2 = _make_quote(), _make_quote()

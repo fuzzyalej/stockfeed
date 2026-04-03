@@ -100,6 +100,7 @@ def _make_async_client(tmp_db_path: str) -> AsyncStockFeedClient:
 # get_ohlcv — basic happy path
 # ---------------------------------------------------------------------------
 
+
 class TestGetOhlcv:
     def test_returns_bars_from_provider(self, tmp_db_path: str) -> None:
         client = _make_client(tmp_db_path)
@@ -136,6 +137,7 @@ class TestGetOhlcv:
 
         assert client._cache is not None
         from datetime import timedelta
+
         cached = client._cache.read("AAPL", Interval.ONE_DAY, _TS, _TS + timedelta(days=1))
         assert cached is not None
 
@@ -147,6 +149,7 @@ class TestGetOhlcv:
         mock_provider.get_ohlcv.return_value = bars
 
         from datetime import timedelta
+
         end = _TS + timedelta(days=1)
         with patch.object(client._selector, "select", return_value=[mock_provider]):
             client.get_ohlcv("AAPL", Interval.ONE_DAY, _TS, end)
@@ -159,6 +162,7 @@ class TestGetOhlcv:
 # ---------------------------------------------------------------------------
 # get_ohlcv — failover
 # ---------------------------------------------------------------------------
+
 
 class TestOhlcvFailover:
     def test_falls_over_to_next_provider_on_rate_limit(self, tmp_db_path: str) -> None:
@@ -211,7 +215,10 @@ class TestOhlcvFailover:
         p2 = MagicMock()
         p2.get_ohlcv.side_effect = ProviderRateLimitError("rate limited", provider="p2")
 
-        with patch.object(client._selector, "select", return_value=[p1, p2]), pytest.raises(ProviderUnavailableError):
+        with (
+            patch.object(client._selector, "select", return_value=[p1, p2]),
+            pytest.raises(ProviderUnavailableError),
+        ):
             client.get_ohlcv(
                 "AAPL",
                 Interval.ONE_DAY,
@@ -227,7 +234,10 @@ class TestOhlcvFailover:
         p2 = MagicMock()
         p2.get_ohlcv.return_value = [_bar()]
 
-        with patch.object(client._selector, "select", return_value=[p1, p2]), pytest.raises(ProviderAuthError):
+        with (
+            patch.object(client._selector, "select", return_value=[p1, p2]),
+            pytest.raises(ProviderAuthError),
+        ):
             client.get_ohlcv(
                 "AAPL",
                 Interval.ONE_DAY,
@@ -243,7 +253,10 @@ class TestOhlcvFailover:
         p1 = MagicMock()
         p1.get_ohlcv.side_effect = TickerNotFoundError("not found", ticker="BOGUS", provider="p1")
 
-        with patch.object(client._selector, "select", return_value=[p1]), pytest.raises(TickerNotFoundError):
+        with (
+            patch.object(client._selector, "select", return_value=[p1]),
+            pytest.raises(TickerNotFoundError),
+        ):
             client.get_ohlcv(
                 "BOGUS",
                 Interval.ONE_DAY,
@@ -255,6 +268,7 @@ class TestOhlcvFailover:
 # ---------------------------------------------------------------------------
 # get_quote
 # ---------------------------------------------------------------------------
+
 
 class TestGetQuote:
     def test_returns_quote(self, tmp_db_path: str) -> None:
@@ -287,6 +301,7 @@ class TestGetQuote:
 # health_check
 # ---------------------------------------------------------------------------
 
+
 class TestHealthCheck:
     def test_returns_health_for_all_providers(self, tmp_db_path: str) -> None:
         client = _make_client(tmp_db_path)
@@ -311,6 +326,7 @@ class TestHealthCheck:
 # ---------------------------------------------------------------------------
 # AsyncStockFeedClient
 # ---------------------------------------------------------------------------
+
 
 class TestAsyncClient:
     def test_get_ohlcv_returns_bars(self, tmp_db_path: str) -> None:
@@ -401,9 +417,11 @@ class TestAsyncClient:
 # get_ticker_info
 # ---------------------------------------------------------------------------
 
+
 class TestGetTickerInfo:
     def test_returns_ticker_info(self, tmp_db_path: str) -> None:
         from stockfeed.models.ticker import TickerInfo
+
         client = _make_client(tmp_db_path)
         expected = TickerInfo(
             ticker="AAPL",
@@ -431,6 +449,7 @@ class TestGetTickerInfo:
 
     def test_skips_not_implemented_provider(self, tmp_db_path: str) -> None:
         from stockfeed.models.ticker import TickerInfo
+
         client = _make_client(tmp_db_path)
         expected = TickerInfo(
             ticker="AAPL",
@@ -464,7 +483,10 @@ class TestGetTickerInfo:
         p1 = MagicMock()
         p1.get_ticker_info.side_effect = ProviderUnavailableError("down", provider="p1")
 
-        with patch.object(client._selector, "select", return_value=[p1]), pytest.raises(ProviderUnavailableError):
+        with (
+            patch.object(client._selector, "select", return_value=[p1]),
+            pytest.raises(ProviderUnavailableError),
+        ):
             client.get_ticker_info("AAPL")
 
 
@@ -472,14 +494,26 @@ class TestGetTickerInfo:
 # AsyncStockFeedClient — additional coverage for get_ticker_info, health_check
 # ---------------------------------------------------------------------------
 
+
 class TestAsyncClientAdditional:
     def test_get_ticker_info_returns_info(self, tmp_db_path: str) -> None:
         from stockfeed.models.ticker import TickerInfo
+
         client = _make_async_client(tmp_db_path)
         expected = TickerInfo(
-            ticker="AAPL", provider="yfinance", name="Apple", exchange="NASDAQ",
-            currency="USD", sector=None, industry=None, market_cap=None,
-            description=None, website=None, logo_url=None, phone=None, country=None,
+            ticker="AAPL",
+            provider="yfinance",
+            name="Apple",
+            exchange="NASDAQ",
+            currency="USD",
+            sector=None,
+            industry=None,
+            market_cap=None,
+            description=None,
+            website=None,
+            logo_url=None,
+            phone=None,
+            country=None,
         )
 
         async def _get_info(ticker: str) -> TickerInfo:
@@ -496,11 +530,22 @@ class TestAsyncClientAdditional:
 
     def test_get_ticker_info_skips_not_implemented(self, tmp_db_path: str) -> None:
         from stockfeed.models.ticker import TickerInfo
+
         client = _make_async_client(tmp_db_path)
         expected = TickerInfo(
-            ticker="AAPL", provider="yfinance", name="Apple", exchange="NASDAQ",
-            currency="USD", sector=None, industry=None, market_cap=None,
-            description=None, website=None, logo_url=None, phone=None, country=None,
+            ticker="AAPL",
+            provider="yfinance",
+            name="Apple",
+            exchange="NASDAQ",
+            currency="USD",
+            sector=None,
+            industry=None,
+            market_cap=None,
+            description=None,
+            website=None,
+            logo_url=None,
+            phone=None,
+            country=None,
         )
 
         async def _fail(ticker: str) -> TickerInfo:
@@ -558,6 +603,7 @@ class TestAsyncClientCacheHit:
 
     def test_ohlcv_cache_hit_skips_provider(self, tmp_db_path: str) -> None:
         from datetime import timedelta
+
         client = _make_async_client(tmp_db_path)
         bars = [_bar()]
 
@@ -589,7 +635,8 @@ class TestAsyncClientCacheHit:
         async def _run() -> None:
             with patch.object(client._selector, "select", return_value=[p1]):
                 await client.get_ohlcv(
-                    "AAPL", Interval.ONE_DAY,
+                    "AAPL",
+                    Interval.ONE_DAY,
                     datetime(2024, 1, 1, tzinfo=timezone.utc),
                     datetime(2024, 1, 31, tzinfo=timezone.utc),
                 )
@@ -621,7 +668,8 @@ async def test_async_ohlcv_failover_rate_limit_then_success(tmp_db_path: str) ->
 
     with patch.object(client._selector, "select", return_value=[p1, p2]):
         result = await client.get_ohlcv(
-            "AAPL", Interval.ONE_DAY,
+            "AAPL",
+            Interval.ONE_DAY,
             datetime(2024, 1, 1, tzinfo=timezone.utc),
             datetime(2024, 1, 31, tzinfo=timezone.utc),
         )
@@ -639,9 +687,13 @@ async def test_async_ohlcv_all_fail(tmp_db_path: str) -> None:
     p1 = MagicMock()
     p1.async_get_ohlcv = _fail
 
-    with patch.object(client._selector, "select", return_value=[p1]), pytest.raises(ProviderUnavailableError):
+    with (
+        patch.object(client._selector, "select", return_value=[p1]),
+        pytest.raises(ProviderUnavailableError),
+    ):
         await client.get_ohlcv(
-            "AAPL", Interval.ONE_DAY,
+            "AAPL",
+            Interval.ONE_DAY,
             datetime(2024, 1, 1, tzinfo=timezone.utc),
             datetime(2024, 1, 31, tzinfo=timezone.utc),
         )
@@ -657,7 +709,10 @@ async def test_async_quote_all_fail(tmp_db_path: str) -> None:
     p1 = MagicMock()
     p1.async_get_quote = _fail
 
-    with patch.object(client._selector, "select", return_value=[p1]), pytest.raises(ProviderUnavailableError):
+    with (
+        patch.object(client._selector, "select", return_value=[p1]),
+        pytest.raises(ProviderUnavailableError),
+    ):
         await client.get_quote("AAPL")
 
 
@@ -671,7 +726,10 @@ async def test_async_ticker_info_all_fail(tmp_db_path: str) -> None:
     p1 = MagicMock()
     p1.async_get_ticker_info = _fail
 
-    with patch.object(client._selector, "select", return_value=[p1]), pytest.raises(ProviderUnavailableError):
+    with (
+        patch.object(client._selector, "select", return_value=[p1]),
+        pytest.raises(ProviderUnavailableError),
+    ):
         await client.get_ticker_info("AAPL")
 
 
@@ -685,9 +743,13 @@ async def test_async_ohlcv_auth_error_propagates(tmp_db_path: str) -> None:
     p1 = MagicMock()
     p1.async_get_ohlcv = _fail
 
-    with patch.object(client._selector, "select", return_value=[p1]), pytest.raises(ProviderAuthError):
+    with (
+        patch.object(client._selector, "select", return_value=[p1]),
+        pytest.raises(ProviderAuthError),
+    ):
         await client.get_ohlcv(
-            "AAPL", Interval.ONE_DAY,
+            "AAPL",
+            Interval.ONE_DAY,
             datetime(2024, 1, 1, tzinfo=timezone.utc),
             datetime(2024, 1, 31, tzinfo=timezone.utc),
         )
@@ -703,7 +765,10 @@ async def test_async_quote_auth_error_propagates(tmp_db_path: str) -> None:
     p1 = MagicMock()
     p1.async_get_quote = _fail
 
-    with patch.object(client._selector, "select", return_value=[p1]), pytest.raises(ProviderAuthError):
+    with (
+        patch.object(client._selector, "select", return_value=[p1]),
+        pytest.raises(ProviderAuthError),
+    ):
         await client.get_quote("AAPL")
 
 
@@ -717,7 +782,10 @@ async def test_async_ticker_info_auth_error_propagates(tmp_db_path: str) -> None
     p1 = MagicMock()
     p1.async_get_ticker_info = _fail
 
-    with patch.object(client._selector, "select", return_value=[p1]), pytest.raises(ProviderAuthError):
+    with (
+        patch.object(client._selector, "select", return_value=[p1]),
+        pytest.raises(ProviderAuthError),
+    ):
         await client.get_ticker_info("AAPL")
 
 
@@ -729,7 +797,10 @@ class TestSyncClientAdditionalPaths:
         p1 = MagicMock()
         p1.get_quote.side_effect = ProviderAuthError("bad key", provider="p1")
 
-        with patch.object(client._selector, "select", return_value=[p1]), pytest.raises(ProviderAuthError):
+        with (
+            patch.object(client._selector, "select", return_value=[p1]),
+            pytest.raises(ProviderAuthError),
+        ):
             client.get_quote("AAPL")
 
     def test_get_quote_all_fail_raises(self, tmp_db_path: str) -> None:
@@ -737,7 +808,10 @@ class TestSyncClientAdditionalPaths:
         p1 = MagicMock()
         p1.get_quote.side_effect = ProviderUnavailableError("down", provider="p1")
 
-        with patch.object(client._selector, "select", return_value=[p1]), pytest.raises(ProviderUnavailableError):
+        with (
+            patch.object(client._selector, "select", return_value=[p1]),
+            pytest.raises(ProviderUnavailableError),
+        ):
             client.get_quote("AAPL")
 
     def test_get_ticker_info_auth_error_propagates(self, tmp_db_path: str) -> None:
@@ -745,26 +819,33 @@ class TestSyncClientAdditionalPaths:
         p1 = MagicMock()
         p1.get_ticker_info.side_effect = ProviderAuthError("bad key", provider="p1")
 
-        with patch.object(client._selector, "select", return_value=[p1]), pytest.raises(ProviderAuthError):
+        with (
+            patch.object(client._selector, "select", return_value=[p1]),
+            pytest.raises(ProviderAuthError),
+        ):
             client.get_ticker_info("AAPL")
 
 
 class TestRateLimiterWindowExpiry:
     def test_expired_window_is_available(self, tmp_db_path: str) -> None:
         from stockfeed.providers.rate_limiter import RateLimiter
+
         rl = RateLimiter(db_path=tmp_db_path)
         # Set a window that has already expired (1 second window, started far in the past)
         from datetime import datetime, timedelta, timezone
 
         past = datetime.now(timezone.utc) - timedelta(seconds=120)
         conn = rl._conn
-        conn.execute("""
+        conn.execute(
+            """
             INSERT INTO rate_limit_state (provider, requests_made, window_start, window_seconds, limit_per_window, updated_at)
             VALUES ('tiingo', 10, ?, 60, 10, ?)
             ON CONFLICT (provider) DO UPDATE SET
                 requests_made = 10, window_start = excluded.window_start,
                 window_seconds = 60, limit_per_window = 10
-        """, [past, past])
+        """,
+            [past, past],
+        )
         # Even though 10/10 requests used, window expired → should be available
         assert rl.is_available("tiingo") is True
 
@@ -800,11 +881,13 @@ class TestStringDatesAndIntervals:
         p1.get_ohlcv.assert_called_once()
         _, _, start, end = p1.get_ohlcv.call_args[0]
         from datetime import timezone
+
         assert start.tzinfo is timezone.utc
         assert end.tzinfo is timezone.utc
 
     def test_get_ohlcv_with_string_interval(self, tmp_db_path: str) -> None:
         from stockfeed.models.interval import Interval
+
         client = _make_client(tmp_db_path)
         p1 = MagicMock()
         p1.get_ohlcv.return_value = [_bar("AAPL")]

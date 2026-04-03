@@ -37,7 +37,9 @@ _INTERVAL_MAP: dict[Interval, str] = {
 }
 
 
-def _raise_for_status(resp: httpx.Response, provider: str = "twelvedata", ticker: str | None = None) -> None:
+def _raise_for_status(
+    resp: httpx.Response, provider: str = "twelvedata", ticker: str | None = None
+) -> None:
     if resp.status_code == 401:
         raise ProviderAuthError(
             "Twelve Data authentication failed (HTTP 401)",

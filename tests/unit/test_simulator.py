@@ -150,6 +150,7 @@ class TestSimulate:
 class TestAsyncClientSimulate:
     async def test_client_simulate_raises_without_dev_mode(self, tmp_path) -> None:
         from stockfeed import AsyncStockFeedClient
+
         client = AsyncStockFeedClient(db_path=str(tmp_path / "c.db"))
         assert client.settings.dev_mode is False
 
@@ -159,6 +160,7 @@ class TestAsyncClientSimulate:
 
     async def test_client_dev_mode_kwarg(self, tmp_path) -> None:
         from stockfeed import AsyncStockFeedClient
+
         client = AsyncStockFeedClient(dev_mode=True, db_path=str(tmp_path / "c.db"))
         assert client.settings.dev_mode is True
 
@@ -168,5 +170,6 @@ class TestAsyncClientStreamQuote:
         import inspect
 
         from stockfeed import AsyncStockFeedClient
+
         client = AsyncStockFeedClient(db_path=str(tmp_path / "c.db"))
         assert inspect.isasyncgenfunction(client.stream_quote)

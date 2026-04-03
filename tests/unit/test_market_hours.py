@@ -51,21 +51,24 @@ class TestMarketHoursChecker:
 
     def test_is_market_open_returns_bool(self) -> None:
         # Does not raise; weekend is closed
-        result = self.checker.is_market_open("XNYS",
-            dt=datetime(2024, 1, 6, 12, 0, tzinfo=timezone.utc))  # Saturday
+        result = self.checker.is_market_open(
+            "XNYS", dt=datetime(2024, 1, 6, 12, 0, tzinfo=timezone.utc)
+        )  # Saturday
         assert isinstance(result, bool)
         assert result is False
 
     def test_is_market_open_weekday_outside_hours(self) -> None:
         # 3am UTC on a Tuesday = well outside NYSE hours
-        result = self.checker.is_market_open("XNYS",
-            dt=datetime(2024, 1, 2, 3, 0, tzinfo=timezone.utc))
+        result = self.checker.is_market_open(
+            "XNYS", dt=datetime(2024, 1, 2, 3, 0, tzinfo=timezone.utc)
+        )
         assert isinstance(result, bool)
 
     def test_is_market_open_with_mapped_exchange(self) -> None:
         # NMS maps to XNAS
-        result = self.checker.is_market_open("NMS",
-            dt=datetime(2024, 1, 6, 12, 0, tzinfo=timezone.utc))  # Saturday
+        result = self.checker.is_market_open(
+            "NMS", dt=datetime(2024, 1, 6, 12, 0, tzinfo=timezone.utc)
+        )  # Saturday
         assert result is False
 
     def test_get_calendar_caches_result(self) -> None:

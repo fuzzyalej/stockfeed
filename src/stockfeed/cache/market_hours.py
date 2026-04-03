@@ -20,11 +20,11 @@ _INTRADAY_INTERVALS = {
 
 # Mapping from common exchange codes to exchange_calendars keys
 _EXCHANGE_MAP: dict[str, str] = {
-    "NMS": "XNAS",   # NASDAQ
+    "NMS": "XNAS",  # NASDAQ
     "NGM": "XNAS",
-    "NYQ": "XNYS",   # NYSE
-    "PCX": "XNYS",   # NYSE Arca
-    "ASE": "XNYS",   # NYSE American
+    "NYQ": "XNYS",  # NYSE
+    "PCX": "XNYS",  # NYSE Arca
+    "ASE": "XNYS",  # NYSE American
     "XNYS": "XNYS",
     "XNAS": "XNAS",
     "LSE": "XLON",

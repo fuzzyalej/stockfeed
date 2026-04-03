@@ -122,7 +122,9 @@ def cmd_inspect(args: argparse.Namespace) -> None:
     print("-" * len(header))
     for r in rows:
         ticker, ts, interval, open_, _high, _low, close_raw, _adj, volume, provider = r
-        print(f"{ticker:<8} {str(ts):<26} {interval:<6} {float(open_):>10.4f} {float(close_raw):>10.4f} {int(volume):>12,} {provider}")
+        print(
+            f"{ticker:<8} {str(ts):<26} {interval:<6} {float(open_):>10.4f} {float(close_raw):>10.4f} {int(volume):>12,} {provider}"
+        )
 
     print(f"\n{len(rows)} row(s) shown (max 100).")
 

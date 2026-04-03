@@ -72,7 +72,9 @@ class TestTwelvedataNormalizer:
 
     def test_normalize_ohlcv_empty_raises(self) -> None:
         with pytest.raises(ValidationError):
-            self.normalizer.normalize_ohlcv(({"values": [], "status": "ok"}, "AAPL", Interval.ONE_DAY))
+            self.normalizer.normalize_ohlcv(
+                ({"values": [], "status": "ok"}, "AAPL", Interval.ONE_DAY)
+            )
 
     def test_normalize_quote_returns_quote(self) -> None:
         fixture = _load("quote.json")
@@ -166,7 +168,9 @@ class TestTwelvedataProvider:
     def test_get_ohlcv_error_status_raises_not_found(self) -> None:
         with respx.mock:
             respx.get("https://api.twelvedata.com/time_series").mock(
-                return_value=httpx.Response(200, json={"status": "error", "message": "Symbol not found"})
+                return_value=httpx.Response(
+                    200, json={"status": "error", "message": "Symbol not found"}
+                )
             )
             with pytest.raises(TickerNotFoundError):
                 self.provider.get_ohlcv(
@@ -231,55 +235,66 @@ class TestTwelvedataProvider:
 class TestTwelvedataNormalizerAdditional:
     def setup_method(self) -> None:
         from stockfeed.providers.twelvedata.normalizer import TwelvedataNormalizer
+
         self.n = TwelvedataNormalizer()
 
     def test_normalize_ohlcv_invalid_raw_raises(self) -> None:
         from stockfeed.exceptions import ValidationError
+
         with pytest.raises(ValidationError):
             self.n.normalize_ohlcv("not_a_tuple")
 
     def test_normalize_ohlcv_empty_data_raises(self) -> None:
         from stockfeed.exceptions import ValidationError
+
         with pytest.raises(ValidationError):
             self.n.normalize_ohlcv(({}, "AAPL", Interval.ONE_DAY))
 
     def test_normalize_ohlcv_empty_values_raises(self) -> None:
         from stockfeed.exceptions import ValidationError
+
         with pytest.raises(ValidationError):
             self.n.normalize_ohlcv(({"values": []}, "AAPL", Interval.ONE_DAY))
 
     def test_normalize_quote_invalid_raw_raises(self) -> None:
         from stockfeed.exceptions import ValidationError
+
         with pytest.raises(ValidationError):
             self.n.normalize_quote("not_a_tuple")
 
     def test_normalize_quote_empty_data_raises(self) -> None:
         from stockfeed.exceptions import ValidationError
+
         with pytest.raises(ValidationError):
             self.n.normalize_quote(({}, "AAPL"))
 
     def test_normalize_ticker_info_invalid_raw_raises(self) -> None:
         from stockfeed.exceptions import ValidationError
+
         with pytest.raises(ValidationError):
             self.n.normalize_ticker_info("not_a_tuple")
 
     def test_normalize_ticker_info_empty_data_raises(self) -> None:
         from stockfeed.exceptions import ValidationError
+
         with pytest.raises(ValidationError):
             self.n.normalize_ticker_info(({}, "AAPL"))
 
     def test_dec_none_returns_none(self) -> None:
         from stockfeed.providers.twelvedata.normalizer import _dec
+
         assert _dec(None) is None
 
     def test_dec_invalid_returns_none(self) -> None:
         from stockfeed.providers.twelvedata.normalizer import _dec
+
         assert _dec("bad") is None
 
     def test_parse_dt_various_formats(self) -> None:
         from datetime import timezone
 
         from stockfeed.providers.twelvedata.normalizer import _parse_dt
+
         # Space-separated format
         dt1 = _parse_dt("2024-01-02 09:30:00")
         assert dt1.tzinfo == timezone.utc

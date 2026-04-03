@@ -57,7 +57,9 @@ class FinnhubNormalizer(BaseNormalizer):
         volumes: list[float] = data["v"]
 
         bars: list[OHLCVBar] = []
-        for ts, o, h, lo, c, v in zip(timestamps, opens, highs, lows, closes, volumes, strict=False):
+        for ts, o, h, lo, c, v in zip(
+            timestamps, opens, highs, lows, closes, volumes, strict=False
+        ):
             dt = datetime.fromtimestamp(ts, tz=timezone.utc)
             bars.append(
                 OHLCVBar(

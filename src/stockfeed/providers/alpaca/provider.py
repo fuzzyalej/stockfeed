@@ -37,7 +37,9 @@ _TIMEFRAME_MAP: dict[Interval, str] = {
 }
 
 
-def _raise_for_status(resp: httpx.Response, provider: str = "alpaca", ticker: str | None = None) -> None:
+def _raise_for_status(
+    resp: httpx.Response, provider: str = "alpaca", ticker: str | None = None
+) -> None:
     if resp.status_code in (401, 403):
         raise ProviderAuthError(
             f"Alpaca authentication failed (HTTP {resp.status_code})",

@@ -183,7 +183,9 @@ class TestTiingoProvider:
     def test_health_check_healthy(self) -> None:
         with respx.mock:
             respx.get("https://api.tiingo.com/api/test").mock(
-                return_value=httpx.Response(200, json={"message": "You successfully sent a request"})
+                return_value=httpx.Response(
+                    200, json={"message": "You successfully sent a request"}
+                )
             )
             status = self.provider.health_check()
         assert status.provider == "tiingo"
@@ -208,44 +210,53 @@ class TestTiingoProvider:
 class TestTiingoNormalizerAdditional:
     def setup_method(self) -> None:
         from stockfeed.providers.tiingo.normalizer import TiingoNormalizer
+
         self.n = TiingoNormalizer()
 
     def test_normalize_ohlcv_invalid_raw_raises(self) -> None:
         from stockfeed.exceptions import ValidationError
+
         with pytest.raises(ValidationError):
             self.n.normalize_ohlcv("not_a_tuple")
 
     def test_normalize_ohlcv_empty_data_raises(self) -> None:
         from stockfeed.exceptions import ValidationError
+
         with pytest.raises(ValidationError):
             self.n.normalize_ohlcv(([], "AAPL", Interval.ONE_DAY))
 
     def test_normalize_quote_invalid_raw_raises(self) -> None:
         from stockfeed.exceptions import ValidationError
+
         with pytest.raises(ValidationError):
             self.n.normalize_quote("not_a_tuple")
 
     def test_normalize_quote_empty_data_raises(self) -> None:
         from stockfeed.exceptions import ValidationError
+
         with pytest.raises(ValidationError):
             self.n.normalize_quote(([], "AAPL"))
 
     def test_normalize_ticker_info_invalid_raw_raises(self) -> None:
         from stockfeed.exceptions import ValidationError
+
         with pytest.raises(ValidationError):
             self.n.normalize_ticker_info("not_a_tuple")
 
     def test_normalize_ticker_info_empty_data_raises(self) -> None:
         from stockfeed.exceptions import ValidationError
+
         with pytest.raises(ValidationError):
             self.n.normalize_ticker_info(({}, "AAPL"))
 
     def test_dec_none_returns_none(self) -> None:
         from stockfeed.providers.tiingo.normalizer import _dec
+
         assert _dec(None) is None
 
     def test_dec_invalid_returns_none(self) -> None:
         from stockfeed.providers.tiingo.normalizer import _dec
+
         assert _dec("not_a_number") is None
 
     def test_normalize_ticker_info_success(self) -> None:

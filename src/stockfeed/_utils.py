@@ -37,9 +37,7 @@ def parse_dt(value: str | datetime) -> datetime:
             return datetime.strptime(value, fmt).replace(tzinfo=timezone.utc)
         except ValueError:
             continue
-    raise ValueError(
-        f"Cannot parse date {value!r}. Use 'YYYY-MM-DD' or a datetime object."
-    )
+    raise ValueError(f"Cannot parse date {value!r}. Use 'YYYY-MM-DD' or a datetime object.")
 
 
 def parse_interval(value: str | Interval) -> Interval:

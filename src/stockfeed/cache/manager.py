@@ -33,7 +33,20 @@ class CacheStats:
 
 
 def _row_to_bar(row: tuple[Any, ...]) -> OHLCVBar:
-    ticker, ts, interval, open_, high, low, close_raw, close_adj, volume, vwap, trade_count, provider = row
+    (
+        ticker,
+        ts,
+        interval,
+        open_,
+        high,
+        low,
+        close_raw,
+        close_adj,
+        volume,
+        vwap,
+        trade_count,
+        provider,
+    ) = row
     # DuckDB returns timestamps as datetime objects; ensure UTC
     if isinstance(ts, datetime):
         dt = ts if ts.tzinfo is not None else ts.replace(tzinfo=timezone.utc)

@@ -178,9 +178,18 @@ class TestModelValidators:
                 provider="test",
                 timestamp=datetime.now(timezone.utc),
                 last=Decimal("100"),
-                bid=None, ask=None, bid_size=None, ask_size=None,
-                last_size=None, volume=None, open=None, high=None,
-                low=None, close=None, change=None, change_pct=None,
+                bid=None,
+                ask=None,
+                bid_size=None,
+                ask_size=None,
+                last_size=None,
+                volume=None,
+                open=None,
+                high=None,
+                low=None,
+                close=None,
+                change=None,
+                change_pct=None,
             )
 
     def test_ticker_info_empty_ticker_raises(self) -> None:
@@ -191,9 +200,14 @@ class TestModelValidators:
                 name="Test",
                 exchange="NYSE",
                 currency="USD",
-                sector=None, industry=None, market_cap=None,
-                description=None, website=None, logo_url=None,
-                phone=None, country=None,
+                sector=None,
+                industry=None,
+                market_cap=None,
+                description=None,
+                website=None,
+                logo_url=None,
+                phone=None,
+                country=None,
             )
 
 
@@ -205,8 +219,10 @@ class TestNormalizerBase:
         class _N(BaseNormalizer):
             def normalize_ohlcv(self, raw):  # type: ignore[override]
                 return []
+
             def normalize_quote(self, raw):  # type: ignore[override]
                 return None
+
             def normalize_ticker_info(self, raw):  # type: ignore[override]
                 return None
 

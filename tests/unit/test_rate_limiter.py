@@ -12,20 +12,26 @@ class TestRateLimiterAvailability:
 
     def test_provider_within_limit_is_available(self, tmp_db_path: str) -> None:
         rl = RateLimiter(db_path=tmp_db_path)
-        rl.update_from_headers("tiingo", {
-            "X-RateLimit-Remaining": "5",
-            "X-RateLimit-Limit": "10",
-            "X-RateLimit-Reset": "60",
-        })
+        rl.update_from_headers(
+            "tiingo",
+            {
+                "X-RateLimit-Remaining": "5",
+                "X-RateLimit-Limit": "10",
+                "X-RateLimit-Reset": "60",
+            },
+        )
         assert rl.is_available("tiingo") is True
 
     def test_provider_at_zero_remaining_not_available(self, tmp_db_path: str) -> None:
         rl = RateLimiter(db_path=tmp_db_path)
-        rl.update_from_headers("tiingo", {
-            "X-RateLimit-Remaining": "0",
-            "X-RateLimit-Limit": "10",
-            "X-RateLimit-Reset": "9999",
-        })
+        rl.update_from_headers(
+            "tiingo",
+            {
+                "X-RateLimit-Remaining": "0",
+                "X-RateLimit-Limit": "10",
+                "X-RateLimit-Reset": "9999",
+            },
+        )
         assert rl.is_available("tiingo") is False
 
     def test_no_limit_set_is_always_available(self, tmp_db_path: str) -> None:
@@ -38,11 +44,14 @@ class TestRateLimiterAvailability:
 class TestRateLimiterRecordRequest:
     def test_record_request_increments_counter(self, tmp_db_path: str) -> None:
         rl = RateLimiter(db_path=tmp_db_path)
-        rl.update_from_headers("tiingo", {
-            "X-RateLimit-Remaining": "9",
-            "X-RateLimit-Limit": "10",
-            "X-RateLimit-Reset": "60",
-        })
+        rl.update_from_headers(
+            "tiingo",
+            {
+                "X-RateLimit-Remaining": "9",
+                "X-RateLimit-Limit": "10",
+                "X-RateLimit-Reset": "60",
+            },
+        )
         rl.record_request("tiingo")
         rl.record_request("tiingo")
         # Two more requests recorded; doesn't raise
@@ -58,11 +67,14 @@ class TestRateLimiterRecordRequest:
 class TestRateLimiterUpdateFromHeaders:
     def test_updates_from_standard_headers(self, tmp_db_path: str) -> None:
         rl = RateLimiter(db_path=tmp_db_path)
-        rl.update_from_headers("finnhub", {
-            "X-RateLimit-Remaining": "3",
-            "X-RateLimit-Limit": "5",
-            "X-RateLimit-Reset": "30",
-        })
+        rl.update_from_headers(
+            "finnhub",
+            {
+                "X-RateLimit-Remaining": "3",
+                "X-RateLimit-Limit": "5",
+                "X-RateLimit-Reset": "30",
+            },
+        )
         # 5 - 3 = 2 requests made, limit 5 → still available
         assert rl.is_available("finnhub") is True
 
@@ -79,21 +91,27 @@ class TestRateLimiterUpdateFromHeaders:
 
     def test_case_insensitive_headers(self, tmp_db_path: str) -> None:
         rl = RateLimiter(db_path=tmp_db_path)
-        rl.update_from_headers("tiingo", {
-            "x-ratelimit-remaining": "2",
-            "x-ratelimit-limit": "10",
-        })
+        rl.update_from_headers(
+            "tiingo",
+            {
+                "x-ratelimit-remaining": "2",
+                "x-ratelimit-limit": "10",
+            },
+        )
         assert rl.is_available("tiingo") is True
 
 
 class TestRateLimiterResetWindow:
     def test_reset_window_clears_counter(self, tmp_db_path: str) -> None:
         rl = RateLimiter(db_path=tmp_db_path)
-        rl.update_from_headers("tiingo", {
-            "X-RateLimit-Remaining": "0",
-            "X-RateLimit-Limit": "10",
-            "X-RateLimit-Reset": "9999",
-        })
+        rl.update_from_headers(
+            "tiingo",
+            {
+                "X-RateLimit-Remaining": "0",
+                "X-RateLimit-Limit": "10",
+                "X-RateLimit-Reset": "9999",
+            },
+        )
         assert rl.is_available("tiingo") is False
 
         rl.reset_window("tiingo")

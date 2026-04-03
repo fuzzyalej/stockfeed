@@ -17,10 +17,14 @@ class TestCoingeckoProvider:
         from datetime import datetime, timezone
 
         from stockfeed.models.interval import Interval
+
         with pytest.raises(NotImplementedError):
-            self.p.get_ohlcv("BTC", Interval.ONE_DAY,
+            self.p.get_ohlcv(
+                "BTC",
+                Interval.ONE_DAY,
                 datetime(2024, 1, 1, tzinfo=timezone.utc),
-                datetime(2024, 1, 31, tzinfo=timezone.utc))
+                datetime(2024, 1, 31, tzinfo=timezone.utc),
+            )
 
     def test_get_quote_raises(self) -> None:
         with pytest.raises(NotImplementedError):
@@ -42,9 +46,12 @@ class TestCoingeckoProvider:
 
         async def _run() -> None:
             with pytest.raises(NotImplementedError):
-                await self.p.async_get_ohlcv("BTC", Interval.ONE_DAY,
+                await self.p.async_get_ohlcv(
+                    "BTC",
+                    Interval.ONE_DAY,
                     datetime(2024, 1, 1, tzinfo=timezone.utc),
-                    datetime(2024, 1, 31, tzinfo=timezone.utc))
+                    datetime(2024, 1, 31, tzinfo=timezone.utc),
+                )
             with pytest.raises(NotImplementedError):
                 await self.p.async_get_quote("BTC")
             with pytest.raises(NotImplementedError):
@@ -58,6 +65,7 @@ class TestCoingeckoProvider:
 class TestCoingeckoNormalizer:
     def setup_method(self) -> None:
         from stockfeed.providers.coingecko.normalizer import CoingeckoNormalizer
+
         self.n = CoingeckoNormalizer()
 
     def test_normalize_ohlcv_raises_not_implemented(self) -> None:

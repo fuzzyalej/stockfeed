@@ -11,6 +11,7 @@ class TestProviderRegistry:
     def test_register_and_get(self) -> None:
         reg = ProviderRegistry()
         from stockfeed.providers.yfinance.provider import YFinanceProvider
+
         reg.register(YFinanceProvider)
         assert reg.get("yfinance") is YFinanceProvider
 
@@ -22,6 +23,7 @@ class TestProviderRegistry:
     def test_get_includes_available_names_in_error(self) -> None:
         reg = ProviderRegistry()
         from stockfeed.providers.yfinance.provider import YFinanceProvider
+
         reg.register(YFinanceProvider)
         with pytest.raises(KeyError, match="yfinance"):
             reg.get("bogus")
@@ -34,6 +36,7 @@ class TestProviderRegistry:
     def test_all_returns_snapshot(self) -> None:
         reg = ProviderRegistry()
         from stockfeed.providers.yfinance.provider import YFinanceProvider
+
         reg.register(YFinanceProvider)
         snapshot = reg.all()
         assert "yfinance" in snapshot

@@ -38,7 +38,9 @@ _INTRADAY_INTERVALS = {Interval.ONE_MINUTE, Interval.FIVE_MINUTES, Interval.FIFT
 _SUPPORTED = list(_INTERVAL_MAP.keys())
 
 
-def _raise_for_status(resp: httpx.Response, provider: str = "tradier", ticker: str | None = None) -> None:
+def _raise_for_status(
+    resp: httpx.Response, provider: str = "tradier", ticker: str | None = None
+) -> None:
     if resp.status_code == 401:
         raise ProviderAuthError(
             "Tradier authentication failed (HTTP 401)",

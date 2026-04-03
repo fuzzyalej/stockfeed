@@ -38,7 +38,9 @@ _RESOLUTION_MAP: dict[Interval, str] = {
 _SUPPORTED = list(_RESOLUTION_MAP.keys())
 
 
-def _raise_for_status(resp: httpx.Response, provider: str = "finnhub", ticker: str | None = None) -> None:
+def _raise_for_status(
+    resp: httpx.Response, provider: str = "finnhub", ticker: str | None = None
+) -> None:
     if resp.status_code in (401, 403):
         raise ProviderAuthError(
             f"Finnhub authentication failed (HTTP {resp.status_code})",
@@ -99,7 +101,9 @@ class FinnhubProvider(AbstractProvider):
     def _async_client(self) -> httpx.AsyncClient:
         return httpx.AsyncClient(base_url=_BASE_URL, timeout=30.0)
 
-    def _params(self, extra: dict[str, str | int | float] | None = None) -> dict[str, str | int | float]:
+    def _params(
+        self, extra: dict[str, str | int | float] | None = None
+    ) -> dict[str, str | int | float]:
         p: dict[str, str | int | float] = {"token": self._api_key}
         if extra:
             p.update(extra)
@@ -130,12 +134,14 @@ class FinnhubProvider(AbstractProvider):
         with self._client() as client:
             resp = client.get(
                 "/stock/candles",
-                params=self._params({
-                    "symbol": ticker,
-                    "resolution": resolution,
-                    "from": unix_start,
-                    "to": unix_end,
-                }),
+                params=self._params(
+                    {
+                        "symbol": ticker,
+                        "resolution": resolution,
+                        "from": unix_start,
+                        "to": unix_end,
+                    }
+                ),
             )
             _raise_for_status(resp, ticker=ticker)
             data = resp.json()

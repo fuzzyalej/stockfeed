@@ -36,7 +36,9 @@ _INTRADAY_RESAMPLE: dict[Interval, str] = {
 _DAILY_INTERVALS = {Interval.ONE_DAY, Interval.ONE_WEEK, Interval.ONE_MONTH}
 
 
-def _raise_for_status(resp: httpx.Response, provider: str = "tiingo", ticker: str | None = None) -> None:
+def _raise_for_status(
+    resp: httpx.Response, provider: str = "tiingo", ticker: str | None = None
+) -> None:
     """Map HTTP error codes to stockfeed exceptions."""
     if resp.status_code == 401:
         raise ProviderAuthError(

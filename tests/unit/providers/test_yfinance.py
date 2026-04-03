@@ -321,7 +321,8 @@ class TestYFinanceProviderAsync:
         async def _run():
             with patch.object(p, "get_ohlcv", return_value=bars):
                 result = await p.async_get_ohlcv(
-                    "AAPL", Interval.ONE_DAY,
+                    "AAPL",
+                    Interval.ONE_DAY,
                     datetime(2024, 1, 1, tzinfo=timezone.utc),
                     datetime(2024, 1, 31, tzinfo=timezone.utc),
                 )
