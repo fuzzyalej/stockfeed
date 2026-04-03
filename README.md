@@ -31,18 +31,11 @@ pip install "stockfeed[streaming]"   # SSE streaming support
 ### OHLCV bars (no API key needed)
 
 ```python
-from datetime import datetime, timezone
 from stockfeed import StockFeedClient
-from stockfeed.models.interval import Interval
 
 client = StockFeedClient()
 
-bars = client.get_ohlcv(
-    "AAPL",
-    Interval.ONE_DAY,
-    start=datetime(2024, 1, 1, tzinfo=timezone.utc),
-    end=datetime(2024, 1, 31, tzinfo=timezone.utc),
-)
+bars = client.get_ohlcv("AAPL", "1d", "2024-01-01", "2024-01-31")
 
 for bar in bars:
     print(bar.timestamp.date(), bar.close_raw, bar.close_adj)
@@ -50,6 +43,8 @@ for bar in bars:
 # 2024-01-03  184.25  182.36
 # ...
 ```
+
+Date strings are parsed as UTC midnight. You can also pass `datetime` objects directly.
 
 ### Quote and company info
 
@@ -69,16 +64,12 @@ print(info.name, info.sector, info.market_cap)
 
 ```python
 import asyncio
-from datetime import datetime, timezone
 from stockfeed import AsyncStockFeedClient
-from stockfeed.models.interval import Interval
 
 async def main():
     client = AsyncStockFeedClient()
     tasks = [
-        client.get_ohlcv(t, Interval.ONE_DAY,
-            datetime(2024, 6, 1, tzinfo=timezone.utc),
-            datetime(2024, 6, 30, tzinfo=timezone.utc))
+        client.get_ohlcv(t, "1d", "2024-06-01", "2024-06-30")
         for t in ["AAPL", "MSFT", "GOOGL", "AMZN"]
     ]
     results = await asyncio.gather(*tasks)
@@ -93,18 +84,13 @@ asyncio.run(main())
 ```python
 from stockfeed import StockFeedClient, StockFeedSettings
 from stockfeed.exceptions import ProviderAuthError, TickerNotFoundError
-from stockfeed.models.interval import Interval
-from datetime import datetime, timezone
 
 settings = StockFeedSettings(tiingo_api_key="your_tiingo_key")
 # Or set STOCKFEED_TIINGO_API_KEY in env / .env
 client = StockFeedClient(settings=settings)
 
 try:
-    bars = client.get_ohlcv("SPY", Interval.ONE_DAY,
-        start=datetime(2024, 1, 1, tzinfo=timezone.utc),
-        end=datetime(2024, 1, 10, tzinfo=timezone.utc),
-        provider="tiingo")
+    bars = client.get_ohlcv("SPY", "1d", "2024-01-01", "2024-01-10", provider="tiingo")
 except ProviderAuthError:
     print("Check your API key")
 except TickerNotFoundError as e:
@@ -161,17 +147,24 @@ client = StockFeedClient(settings=settings)
 
 ## Supported intervals
 
-| Enum | Value | Description |
+Pass the string value directly or use the `Interval` enum — both are accepted:
+
+```python
+bars = client.get_ohlcv("AAPL", "1d", "2024-01-01", "2024-01-31")   # string
+bars = client.get_ohlcv("AAPL", Interval.ONE_DAY, ...)               # enum
+```
+
+| String | Enum | Description |
 |---|---|---|
-| `Interval.ONE_MINUTE` | `"1m"` | 1-minute bars |
-| `Interval.FIVE_MINUTES` | `"5m"` | 5-minute bars |
-| `Interval.FIFTEEN_MINUTES` | `"15m"` | 15-minute bars |
-| `Interval.THIRTY_MINUTES` | `"30m"` | 30-minute bars |
-| `Interval.ONE_HOUR` | `"1h"` | Hourly bars |
-| `Interval.FOUR_HOURS` | `"4h"` | 4-hour bars |
-| `Interval.ONE_DAY` | `"1d"` | Daily bars |
-| `Interval.ONE_WEEK` | `"1w"` | Weekly bars |
-| `Interval.ONE_MONTH` | `"1mo"` | Monthly bars |
+| `"1m"` | `Interval.ONE_MINUTE` | 1-minute bars |
+| `"5m"` | `Interval.FIVE_MINUTES` | 5-minute bars |
+| `"15m"` | `Interval.FIFTEEN_MINUTES` | 15-minute bars |
+| `"30m"` | `Interval.THIRTY_MINUTES` | 30-minute bars |
+| `"1h"` | `Interval.ONE_HOUR` | Hourly bars |
+| `"4h"` | `Interval.FOUR_HOURS` | 4-hour bars |
+| `"1d"` | `Interval.ONE_DAY` | Daily bars |
+| `"1w"` | `Interval.ONE_WEEK` | Weekly bars |
+| `"1mo"` | `Interval.ONE_MONTH` | Monthly bars |
 
 Not every provider supports every interval. `UnsupportedIntervalError` is raised if an interval isn't available on the selected provider.
 
@@ -189,6 +182,14 @@ Not every provider supports every interval. `UnsupportedIntervalError` is raised
 
 Providers without API keys configured are skipped during selection. yfinance is always tried last.
 
+List all registered providers at runtime:
+
+```python
+client = StockFeedClient()
+for p in client.list_providers():
+    print(p.name, "— auth required:", p.requires_auth)
+```
+
 ## Error handling
 
 All exceptions inherit from `StockFeedError` and carry structured context:
@@ -196,15 +197,11 @@ All exceptions inherit from `StockFeedError` and carry structured context:
 ```python
 from stockfeed import StockFeedClient
 from stockfeed.exceptions import TickerNotFoundError, ProviderUnavailableError
-from stockfeed.models.interval import Interval
-from datetime import datetime, timezone
 
 client = StockFeedClient()
 
 try:
-    bars = client.get_ohlcv("INVALID", Interval.ONE_DAY,
-        datetime(2024, 1, 1, tzinfo=timezone.utc),
-        datetime(2024, 1, 31, tzinfo=timezone.utc))
+    bars = client.get_ohlcv("INVALID", "1d", "2024-01-01", "2024-01-31")
 except TickerNotFoundError as e:
     print(e.ticker, e.provider, e.suggestion)
 except ProviderUnavailableError as e:

@@ -6,19 +6,11 @@ Run:
     python examples/01_ohlcv_yfinance.py
 """
 
-from datetime import datetime, timezone
-
-from stockfeed import StockFeedClient
-from stockfeed.models.interval import Interval
+from stockfeed import Interval, StockFeedClient
 
 client = StockFeedClient()
 
-bars = client.get_ohlcv(
-    "AAPL",
-    Interval.ONE_DAY,
-    start=datetime(2024, 1, 1, tzinfo=timezone.utc),
-    end=datetime(2024, 1, 31, tzinfo=timezone.utc),
-)
+bars = client.get_ohlcv("AAPL", "1d", "2024-01-01", "2024-01-31")
 
 print(f"Fetched {len(bars)} bars for AAPL (1d) via {bars[0].provider}\n")
 print(f"{'Date':<12} {'Open':>10} {'Close':>10} {'Adj Close':>10} {'Volume':>12}")

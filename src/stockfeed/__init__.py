@@ -3,7 +3,7 @@
 __version__ = "0.1.0"
 
 from stockfeed.async_client import AsyncStockFeedClient
-from stockfeed.client import StockFeedClient
+from stockfeed.client import ProviderInfo, StockFeedClient
 from stockfeed.config import StockFeedSettings
 from stockfeed.exceptions import (
     CacheError,
@@ -33,6 +33,7 @@ __all__ = [
     # Clients
     "StockFeedClient",
     "AsyncStockFeedClient",
+    "ProviderInfo",
     # Config
     "StockFeedSettings",
     # Models

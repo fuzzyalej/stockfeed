@@ -1,29 +1,26 @@
-"""Example 4 — Check provider health via StockFeedClient.
+"""Example 4 — List providers and check their health via StockFeedClient.
 
-Shows which providers are registered and probes their liveness.
-Providers that require auth will only appear if their API key is set
-(STOCKFEED_TIINGO_API_KEY, etc.).
+Providers that require auth will appear in the list but health checks for
+them will only succeed if their API key is set
+(STOCKFEED_TIINGO_API_KEY, STOCKFEED_FINNHUB_API_KEY, etc.).
 
 Run:
     python examples/04_provider_health.py
 """
 
-import stockfeed.providers  # noqa: F401 — triggers auto-registration
-
 from stockfeed import StockFeedClient
-from stockfeed.providers.registry import get_default_registry
 
-# --- Registry ---
-registry = get_default_registry()
+client = StockFeedClient()
+
+# --- Registered providers ---
 print("Registered providers:")
-for p in registry.all().values():
+for p in client.list_providers():
     auth = "requires API key" if p.requires_auth else "no auth needed"
     intervals = ", ".join(i.value for i in p.supported_intervals[:4])
     print(f"  {p.name:<12} ({auth})  intervals: {intervals} ...")
 print()
 
-# --- Health check via client (checks all configured providers) ---
-client = StockFeedClient()
+# --- Health check (probes all configured providers) ---
 results = client.health_check()
 
 print("Health checks:")

@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime
 
 import stockfeed.providers as _providers_module  # noqa: F401 — triggers auto-registration
+from stockfeed._utils import parse_dt, parse_interval
 from stockfeed.cache.manager import CacheManager
 from stockfeed.cache.market_hours import MarketHoursChecker
 from stockfeed.config import StockFeedSettings
@@ -23,6 +25,15 @@ from stockfeed.providers.health import HealthChecker
 from stockfeed.providers.rate_limiter import RateLimiter
 from stockfeed.providers.registry import get_default_registry
 from stockfeed.providers.selector import ProviderSelector
+
+
+@dataclass(frozen=True)
+class ProviderInfo:
+    """Metadata about a registered provider."""
+
+    name: str
+    requires_auth: bool
+    supported_intervals: list[Interval]
 
 
 class StockFeedClient:
@@ -67,9 +78,9 @@ class StockFeedClient:
     def get_ohlcv(
         self,
         ticker: str,
-        interval: Interval,
-        start: datetime,
-        end: datetime,
+        interval: str | Interval,
+        start: str | datetime,
+        end: str | datetime,
         provider: str | None = None,
     ) -> list[OHLCVBar]:
         """Return OHLCV bars for *ticker* over [start, end).
@@ -82,16 +93,21 @@ class StockFeedClient:
         ----------
         ticker : str
             Uppercase ticker symbol.
-        interval : Interval
-            Bar width.
-        start : datetime
-            Inclusive start (UTC).
-        end : datetime
-            Exclusive end (UTC).
+        interval : str | Interval
+            Bar width — ``"1d"``, ``"1h"``, etc., or an :class:`Interval` member.
+        start : str | datetime
+            Inclusive start. Accepts ``"YYYY-MM-DD"`` strings (parsed as UTC
+            midnight) or a timezone-aware ``datetime``.
+        end : str | datetime
+            Exclusive end. Same format as *start*.
         provider : str | None
             Pin a specific provider by name (e.g. ``"tiingo"``). ``None`` means
             auto-select.
         """
+        interval = parse_interval(interval)
+        start = parse_dt(start)
+        end = parse_dt(end)
+
         if self._cache and self._market_hours.should_use_cache(interval):
             cached = self._cache.read(ticker, interval, start, end)
             if cached is not None:
@@ -177,6 +193,27 @@ class StockFeedClient:
         raise ProviderUnavailableError(
             f"All providers failed for {ticker}", ticker=ticker
         ) from last_exc
+
+    # ------------------------------------------------------------------
+    # Provider listing
+    # ------------------------------------------------------------------
+
+    def list_providers(self) -> list[ProviderInfo]:
+        """Return metadata for every registered provider.
+
+        Returns
+        -------
+        list[ProviderInfo]
+            One entry per registered provider, sorted alphabetically by name.
+        """
+        return [
+            ProviderInfo(
+                name=cls.name,
+                requires_auth=cls.requires_auth,
+                supported_intervals=list(cls.supported_intervals),
+            )
+            for cls in sorted(get_default_registry().all().values(), key=lambda c: c.name)
+        ]
 
     # ------------------------------------------------------------------
     # Health

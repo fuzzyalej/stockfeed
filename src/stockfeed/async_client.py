@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 
 import stockfeed.providers as _providers_module  # noqa: F401 — triggers auto-registration
+from stockfeed._utils import parse_dt, parse_interval
 from stockfeed.cache.manager import CacheManager
 from stockfeed.cache.market_hours import MarketHoursChecker
 from stockfeed.config import StockFeedSettings
@@ -65,9 +66,9 @@ class AsyncStockFeedClient:
     async def get_ohlcv(
         self,
         ticker: str,
-        interval: Interval,
-        start: datetime,
-        end: datetime,
+        interval: str | Interval,
+        start: str | datetime,
+        end: str | datetime,
         provider: str | None = None,
     ) -> list[OHLCVBar]:
         """Async variant of :meth:`~stockfeed.client.StockFeedClient.get_ohlcv`.
@@ -76,15 +77,20 @@ class AsyncStockFeedClient:
         ----------
         ticker : str
             Uppercase ticker symbol.
-        interval : Interval
-            Bar width.
-        start : datetime
-            Inclusive start (UTC).
-        end : datetime
-            Exclusive end (UTC).
+        interval : str | Interval
+            Bar width — ``"1d"``, ``"1h"``, etc., or an :class:`Interval` member.
+        start : str | datetime
+            Inclusive start. Accepts ``"YYYY-MM-DD"`` strings (parsed as UTC
+            midnight) or a timezone-aware ``datetime``.
+        end : str | datetime
+            Exclusive end. Same format as *start*.
         provider : str | None
             Pin a specific provider by name. ``None`` means auto-select.
         """
+        interval = parse_interval(interval)
+        start = parse_dt(start)
+        end = parse_dt(end)
+
         if self._cache and self._market_hours.should_use_cache(interval):
             cached = self._cache.read(ticker, interval, start, end)
             if cached is not None:

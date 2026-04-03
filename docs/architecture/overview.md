@@ -6,6 +6,7 @@
 - **Cache-first** — DuckDB is checked before any network call; fetched data is written back automatically
 - **Transparent failover** — providers are tried in order; yfinance is always the final fallback
 - **Dual interface** — sync and async clients have identical method surfaces; async methods use `asyncio.to_thread` for providers that don't natively support async
+- **Ergonomic inputs** — dates accept `"YYYY-MM-DD"` strings (UTC midnight) or `datetime`; intervals accept `"1d"` strings or `Interval` enum members
 
 ---
 
@@ -40,8 +41,9 @@
 ```
 src/stockfeed/
 ├── __init__.py              # public re-exports
-├── client.py                # StockFeedClient (sync)
+├── client.py                # StockFeedClient (sync) — includes ProviderInfo dataclass
 ├── async_client.py          # AsyncStockFeedClient
+├── _utils.py                # parse_dt / parse_interval helpers (internal)
 ├── config.py                # StockFeedSettings (pydantic-settings)
 ├── exceptions.py            # full exception hierarchy
 ├── logging.py               # structlog setup with correlation IDs

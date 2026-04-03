@@ -767,3 +767,64 @@ class TestRateLimiterWindowExpiry:
         """, [past, past])
         # Even though 10/10 requests used, window expired → should be available
         assert rl.is_available("tiingo") is True
+
+
+class TestListProviders:
+    def test_returns_all_providers(self, tmp_db_path: str) -> None:
+        client = _make_client(tmp_db_path)
+        providers = client.list_providers()
+        names = [p.name for p in providers]
+        assert "yfinance" in names
+        assert len(providers) >= 1
+
+    def test_sorted_alphabetically(self, tmp_db_path: str) -> None:
+        client = _make_client(tmp_db_path)
+        names = [p.name for p in client.list_providers()]
+        assert names == sorted(names)
+
+    def test_provider_info_fields(self, tmp_db_path: str) -> None:
+        client = _make_client(tmp_db_path)
+        yf = next(p for p in client.list_providers() if p.name == "yfinance")
+        assert yf.requires_auth is False
+        assert len(yf.supported_intervals) > 0
+
+
+class TestStringDatesAndIntervals:
+    def test_get_ohlcv_with_string_dates(self, tmp_db_path: str) -> None:
+        client = _make_client(tmp_db_path)
+        p1 = MagicMock()
+        p1.get_ohlcv.return_value = [_bar("AAPL")]
+        with patch.object(client._selector, "select", return_value=[p1]):
+            bars = client.get_ohlcv("AAPL", "1d", "2024-01-01", "2024-01-31")
+        assert len(bars) == 1
+        p1.get_ohlcv.assert_called_once()
+        _, _, start, end = p1.get_ohlcv.call_args[0]
+        from datetime import timezone
+        assert start.tzinfo is timezone.utc
+        assert end.tzinfo is timezone.utc
+
+    def test_get_ohlcv_with_string_interval(self, tmp_db_path: str) -> None:
+        from stockfeed.models.interval import Interval
+        client = _make_client(tmp_db_path)
+        p1 = MagicMock()
+        p1.get_ohlcv.return_value = [_bar("AAPL")]
+        captured: list[Interval] = []
+
+        def _select(ticker: str, interval: Interval, **kw):  # type: ignore[override]
+            captured.append(interval)
+            return [p1]
+
+        with patch.object(client._selector, "select", side_effect=_select):
+            bars = client.get_ohlcv("AAPL", "1h", "2024-01-01", "2024-01-31")
+        assert len(bars) == 1
+        assert captured[0] is Interval.ONE_HOUR
+
+    def test_invalid_interval_string_raises(self, tmp_db_path: str) -> None:
+        client = _make_client(tmp_db_path)
+        with pytest.raises(ValueError, match="Unknown interval"):
+            client.get_ohlcv("AAPL", "2d", "2024-01-01", "2024-01-31")
+
+    def test_invalid_date_string_raises(self, tmp_db_path: str) -> None:
+        client = _make_client(tmp_db_path)
+        with pytest.raises(ValueError, match="Cannot parse date"):
+            client.get_ohlcv("AAPL", "1d", "not-a-date", "2024-01-31")

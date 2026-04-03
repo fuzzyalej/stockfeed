@@ -8,20 +8,16 @@ Run:
 """
 
 import asyncio
-from datetime import datetime, timezone
 
 from stockfeed import AsyncStockFeedClient
-from stockfeed.models.interval import Interval
 
 client = AsyncStockFeedClient()
 
 TICKERS = ["AAPL", "MSFT", "GOOGL", "AMZN"]
-START = datetime(2024, 6, 1, tzinfo=timezone.utc)
-END = datetime(2024, 6, 30, tzinfo=timezone.utc)
 
 
 async def fetch(ticker: str) -> tuple[str, int]:
-    bars = await client.get_ohlcv(ticker, Interval.ONE_DAY, START, END)
+    bars = await client.get_ohlcv(ticker, "1d", "2024-06-01", "2024-06-30")
     return ticker, len(bars)
 
 
