@@ -15,7 +15,6 @@ from stockfeed.models.ohlcv import OHLCVBar
 from stockfeed.models.quote import Quote
 from stockfeed.models.ticker import TickerInfo
 
-
 # ---------------------------------------------------------------------------
 # Database / settings
 # ---------------------------------------------------------------------------

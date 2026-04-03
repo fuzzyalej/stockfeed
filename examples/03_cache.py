@@ -40,7 +40,7 @@ print(f"\nCache was {speedup:.0f}x faster")
 
 # --- Cache stats ---
 stats = client._cache.stats()  # type: ignore[union-attr]
-print(f"\nCache stats:")
+print("\nCache stats:")
 print(f"  Rows    : {stats.row_count:,}")
 print(f"  Size    : {stats.size_bytes / 1024:.1f} KB")
 print(f"  Oldest  : {stats.oldest_entry}")

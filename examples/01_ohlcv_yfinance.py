@@ -6,7 +6,7 @@ Run:
     python examples/01_ohlcv_yfinance.py
 """
 
-from stockfeed import Interval, StockFeedClient
+from stockfeed import StockFeedClient
 
 client = StockFeedClient()
 
