@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncGenerator
 from datetime import datetime
 
 import stockfeed.providers as _providers_module  # noqa: F401 — triggers auto-registration
@@ -45,8 +46,14 @@ class AsyncStockFeedClient:
         self,
         settings: StockFeedSettings | None = None,
         db_path: str | None = None,
+        *,
+        dev_mode: bool = False,
     ) -> None:
-        self.settings = settings or StockFeedSettings()
+        if settings is None:
+            settings = StockFeedSettings()
+        if dev_mode:
+            settings = settings.model_copy(update={"dev_mode": True})
+        self.settings = settings
         self._db_path = db_path or self.settings.cache_path
         self._cache = CacheManager(db_path=self._db_path) if self.settings.cache_enabled else None
         self._rate_limiter = RateLimiter(db_path=self._db_path)
@@ -202,3 +209,80 @@ class AsyncStockFeedClient:
             if instance is not None:
                 results[name] = await instance.async_health_check()
         return results
+
+    # ------------------------------------------------------------------
+    # Streaming
+    # ------------------------------------------------------------------
+
+    async def stream_quote(
+        self,
+        ticker: str,
+        *,
+        interval: float = 5.0,
+        provider: str | None = None,
+        max_errors: int = 5,
+    ) -> AsyncGenerator[Quote, None]:
+        """Stream live quotes by polling *ticker* every *interval* seconds.
+
+        Parameters
+        ----------
+        ticker : str
+            Uppercase ticker symbol.
+        interval : float
+            Seconds between polls. Defaults to ``5.0``.
+        provider : str | None
+            Pin a specific provider. ``None`` means auto-select.
+        max_errors : int
+            Maximum consecutive transient errors before aborting.
+
+        Yields
+        ------
+        Quote
+        """
+        from stockfeed.streaming.sse import stream_quote as _stream_quote
+
+        async for quote in _stream_quote(
+            ticker, self, interval=interval, provider=provider, max_errors=max_errors
+        ):
+            yield quote
+
+    # ------------------------------------------------------------------
+    # Dev / simulation
+    # ------------------------------------------------------------------
+
+    async def simulate(
+        self,
+        ticker: str,
+        start: str | datetime,
+        end: str | datetime,
+        interval: str | Interval,
+        *,
+        speed: float = 1.0,
+    ) -> AsyncGenerator[OHLCVBar, None]:
+        """Replay historical bars as an async stream (dev/backtest mode).
+
+        Requires :attr:`~stockfeed.config.StockFeedSettings.dev_mode` to be
+        ``True`` (or pass ``dev_mode=True`` to the client constructor).
+
+        Parameters
+        ----------
+        ticker : str
+            Uppercase ticker symbol.
+        start : str | datetime
+            Inclusive start date. ``"YYYY-MM-DD"`` strings are accepted.
+        end : str | datetime
+            Exclusive end date.
+        interval : str | Interval
+            Bar width — ``"1d"``, ``"1h"``, etc.
+        speed : float
+            Playback multiplier. ``1.0`` replays in real time; ``0`` skips all
+            sleeps (instant replay). Defaults to ``1.0``.
+
+        Yields
+        ------
+        OHLCVBar
+        """
+        from stockfeed.dev.simulator import simulate as _simulate
+
+        async for bar in _simulate(ticker, start, end, interval, speed=speed, client=self):
+            yield bar
