@@ -1,5 +1,11 @@
 # stockfeed
 
+[![PyPI version](https://img.shields.io/pypi/v/stockfeed.svg)](https://pypi.org/project/stockfeed/)
+[![Python versions](https://img.shields.io/pypi/pyversions/stockfeed.svg)](https://pypi.org/project/stockfeed/)
+[![CI](https://github.com/your-org/stockfeed/actions/workflows/ci.yml/badge.svg)](https://github.com/your-org/stockfeed/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/badge/coverage-91%25-brightgreen.svg)](https://github.com/your-org/stockfeed)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 Unified market data access for Python — stocks, futures, options, and crypto.
 
 `stockfeed` is a professional-grade library that abstracts multiple data providers behind a single, fully-typed API. It handles provider failover automatically, caches results in an embedded DuckDB database, and exposes identical sync and async interfaces.
@@ -12,7 +18,9 @@ Unified market data access for Python — stocks, futures, options, and crypto.
 - **Dual interface** — `StockFeedClient` (sync) and `AsyncStockFeedClient` (async) with identical method surfaces
 - **Canonical models** — every provider returns the same `OHLCVBar`, `Quote`, and `TickerInfo` types
 - **Both adjusted and raw prices** — `OHLCVBar.close_raw` and `OHLCVBar.close_adj` are always separate fields
-- **Fully typed** — passes `mypy --strict` across all 50 source files
+- **Streaming** — `AsyncStockFeedClient.stream_quote()` polls a provider and yields live `Quote` objects
+- **Dev simulator** — `AsyncStockFeedClient.simulate()` replays historical bars as a real-time stream for backtesting
+- **Fully typed** — passes `mypy --strict` across all source files
 
 ## Installation
 
@@ -20,21 +28,18 @@ Unified market data access for Python — stocks, futures, options, and crypto.
 pip install stockfeed
 ```
 
-For optional provider extras (coming in later phases):
+For SSE streaming support:
 
 ```bash
-pip install "stockfeed[streaming]"   # SSE streaming support
+pip install "stockfeed[streaming]"
 ```
 
 ## Quick start
-
-### OHLCV bars (no API key needed)
 
 ```python
 from stockfeed import StockFeedClient
 
 client = StockFeedClient()
-
 bars = client.get_ohlcv("AAPL", "1d", "2024-01-01", "2024-01-31")
 
 for bar in bars:
@@ -44,13 +49,13 @@ for bar in bars:
 # ...
 ```
 
-Date strings are parsed as UTC midnight. You can also pass `datetime` objects directly.
+Date strings are parsed as UTC midnight. `datetime` objects are also accepted directly.
+
+## Usage examples
 
 ### Quote and company info
 
 ```python
-from stockfeed import StockFeedClient
-
 client = StockFeedClient()
 
 quote = client.get_quote("MSFT")
@@ -86,7 +91,7 @@ from stockfeed import StockFeedClient, StockFeedSettings
 from stockfeed.exceptions import ProviderAuthError, TickerNotFoundError
 
 settings = StockFeedSettings(tiingo_api_key="your_tiingo_key")
-# Or set STOCKFEED_TIINGO_API_KEY in env / .env
+# Or: STOCKFEED_TIINGO_API_KEY=... in env / .env
 client = StockFeedClient(settings=settings)
 
 try:
@@ -97,43 +102,60 @@ except TickerNotFoundError as e:
     print(f"{e.ticker} not found on {e.provider}")
 ```
 
+### Live quote streaming (async)
+
+```python
+import asyncio
+from stockfeed import AsyncStockFeedClient
+
+async def main():
+    client = AsyncStockFeedClient()
+    async for quote in client.stream_quote("AAPL", interval=5.0):
+        print(quote.last, quote.bid, quote.ask)
+
+asyncio.run(main())
+```
+
+### Dev simulator — replay bars at speed
+
+```python
+import asyncio
+from stockfeed import AsyncStockFeedClient
+
+async def main():
+    client = AsyncStockFeedClient(dev_mode=True)
+    async for bar in client.simulate("AAPL", "2024-01-01", "2024-01-31", "1d", speed=0):
+        print(bar.timestamp.date(), bar.close_raw)
+
+asyncio.run(main())
+```
+
 ### Cache management CLI
 
 ```bash
-# Stats
 python -m stockfeed.cache stats
-
-# Clear one ticker
 python -m stockfeed.cache clear --ticker AAPL
-
-# Export to Parquet
 python -m stockfeed.cache export --format parquet --output ./data/
-
-# Inspect rows
 python -m stockfeed.cache inspect --ticker AAPL --interval 1d
 ```
 
 ## Configuration
 
-Settings are loaded from environment variables (prefix `STOCKFEED_`) or a `.env` file.
+Settings load from environment variables (`STOCKFEED_` prefix) or a `.env` file:
 
 ```env
-# Provider API keys — omit any you don't have; those providers are skipped
 STOCKFEED_TIINGO_API_KEY=your_key
 STOCKFEED_FINNHUB_API_KEY=your_key
 STOCKFEED_TWELVEDATA_API_KEY=your_key
 STOCKFEED_ALPACA_API_KEY=your_key
 STOCKFEED_ALPACA_SECRET_KEY=your_secret
 STOCKFEED_TRADIER_API_KEY=your_key
-STOCKFEED_COINGECKO_API_KEY=your_key   # optional, free tier works without it
+STOCKFEED_COINGECKO_API_KEY=your_key   # optional — free tier works without it
 
-# Cache
-STOCKFEED_CACHE_PATH=~/.stockfeed/cache.db   # default
-STOCKFEED_CACHE_ENABLED=true                 # default
-
-# Logging
+STOCKFEED_CACHE_PATH=~/.stockfeed/cache.db
+STOCKFEED_CACHE_ENABLED=true
 STOCKFEED_LOG_LEVEL=INFO
-STOCKFEED_LOG_FORMAT=console   # or "json" for structured output
+STOCKFEED_LOG_FORMAT=console   # or "json"
 ```
 
 Or configure programmatically:
@@ -147,12 +169,7 @@ client = StockFeedClient(settings=settings)
 
 ## Supported intervals
 
-Pass the string value directly or use the `Interval` enum — both are accepted:
-
-```python
-bars = client.get_ohlcv("AAPL", "1d", "2024-01-01", "2024-01-31")   # string
-bars = client.get_ohlcv("AAPL", Interval.ONE_DAY, ...)               # enum
-```
+Both string values and the `Interval` enum are accepted everywhere:
 
 | String | Enum | Description |
 |---|---|---|
@@ -166,21 +183,19 @@ bars = client.get_ohlcv("AAPL", Interval.ONE_DAY, ...)               # enum
 | `"1w"` | `Interval.ONE_WEEK` | Weekly bars |
 | `"1mo"` | `Interval.ONE_MONTH` | Monthly bars |
 
-Not every provider supports every interval. `UnsupportedIntervalError` is raised if an interval isn't available on the selected provider.
+## Provider support matrix
 
-## Providers
+| Provider | OHLCV | Quote | Ticker info | Health | Auth required |
+|---|---|---|---|---|---|
+| `yfinance` | ✅ | ✅ | ✅ | ✅ | No |
+| `tiingo` | ✅ | ✅ | ✅ | ✅ | Yes |
+| `finnhub` | ✅ | ✅ | ✅ | ✅ | Yes |
+| `twelvedata` | ✅ | ✅ | ✅ | ✅ | Yes |
+| `alpaca` | ✅ | ✅ | ✅ | ✅ | Yes |
+| `tradier` | ✅ | ✅ | via yfinance | ✅ | Yes |
+| `coingecko` | 🔜 | 🔜 | 🔜 | 🔜 | Optional |
 
-| Provider | Auth required | Notes |
-|---|---|---|
-| `yfinance` | No | Always available; final failover fallback |
-| `tiingo` | Yes | Free tier available |
-| `finnhub` | Yes | Free tier available |
-| `twelvedata` | Yes | Free tier available |
-| `alpaca` | Yes | Paper and live accounts |
-| `tradier` | Yes | Brokerage API |
-| `coingecko` | Optional | Crypto; free tier works without key |
-
-Providers without API keys configured are skipped during selection. yfinance is always tried last.
+Providers without API keys configured are skipped during auto-selection. `yfinance` is always the final fallback.
 
 List all registered providers at runtime:
 
@@ -192,13 +207,10 @@ for p in client.list_providers():
 
 ## Error handling
 
-All exceptions inherit from `StockFeedError` and carry structured context:
+All exceptions inherit from `StockFeedError` and carry structured context fields:
 
 ```python
-from stockfeed import StockFeedClient
 from stockfeed.exceptions import TickerNotFoundError, ProviderUnavailableError
-
-client = StockFeedClient()
 
 try:
     bars = client.get_ohlcv("INVALID", "1d", "2024-01-01", "2024-01-31")
@@ -211,36 +223,18 @@ except ProviderUnavailableError as e:
 | Exception | When raised |
 |---|---|
 | `ProviderAuthError` | Missing or invalid API key |
-| `ProviderRateLimitError` | Rate limit exceeded (has `.retry_after`) |
+| `ProviderRateLimitError` | Rate limit exceeded (`.retry_after` seconds) |
 | `ProviderUnavailableError` | Provider unreachable or server error |
 | `TickerNotFoundError` | Ticker doesn't exist on this provider |
 | `UnsupportedIntervalError` | Interval not supported by provider |
 | `CacheReadError` / `CacheWriteError` | DuckDB cache I/O failure |
 | `ValidationError` | Bad input (ticker format, date range, etc.) |
 | `ConfigurationError` | Missing or invalid configuration |
-
-## Development
-
-```bash
-git clone https://github.com/your-org/stockfeed
-cd stockfeed
-python -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
-pre-commit install
-```
-
-Run checks:
-
-```bash
-ruff check src/ tests/      # lint
-ruff format src/ tests/     # format
-mypy src/                   # type check
-pytest                      # tests
-```
+| `DevModeError` | Dev-only feature called outside dev mode |
 
 ## Examples
 
-Working examples are in the [`examples/`](examples/) directory:
+Working examples are in [`examples/`](examples/):
 
 | File | What it shows |
 |---|---|
@@ -251,24 +245,25 @@ Working examples are in the [`examples/`](examples/) directory:
 | `05_async.py` | Concurrent fetching with `asyncio.gather` |
 | `06_paid_provider.py` | Tiingo with auth and error handling |
 
-Run any example after installing the library:
+## Development
 
 ```bash
-pip install -e ".[dev]"
-python examples/01_ohlcv_yfinance.py
+git clone https://github.com/your-org/stockfeed
+cd stockfeed
+uv sync
 ```
 
-## Project status
+Run checks:
 
-| Phase | Description | Status |
-|---|---|---|
-| 1 | Project scaffold, models, config, exceptions, cache schema | Done |
-| 2 | Provider abstraction layer, yfinance + stub providers | Done |
-| 3 | Cache layer + HTTP providers (Tiingo, Finnhub, Twelve Data, Alpaca, Tradier) | Done |
-| 4 | Sync & async clients, failover logic, ≥90% test coverage | Done |
-| 5 | SSE streaming | Planned |
-| 6 | Dev mode, CLI, MkDocs | Planned |
+```bash
+uv run ruff check src/ tests/
+uv run ruff format src/ tests/
+uv run mypy src/
+uv run pytest --cov=stockfeed --cov-fail-under=90
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for adding new providers.
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE).

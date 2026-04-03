@@ -1,0 +1,78 @@
+site_name: stockfeed
+site_description: Unified market data access for Python — stocks, futures, options, and crypto.
+site_url: https://your-org.github.io/stockfeed/
+repo_url: https://github.com/your-org/stockfeed
+repo_name: your-org/stockfeed
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - content.code.annotate
+    - search.highlight
+    - search.suggest
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: numpy
+            show_source: true
+            show_root_heading: true
+            show_symbol_type_heading: true
+            members_order: source
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Configuration: configuration.md
+  - Providers:
+    - Overview: providers/overview.md
+    - yfinance: providers/yfinance.md
+    - Tiingo: providers/tiingo.md
+    - Finnhub: providers/finnhub.md
+    - Twelve Data: providers/twelvedata.md
+    - Alpaca: providers/alpaca.md
+    - Tradier: providers/tradier.md
+    - CoinGecko: providers/coingecko.md
+  - Streaming: streaming.md
+  - Dev Tools: dev-tools.md
+  - API Reference:
+    - Client: api-reference/client.md
+    - Models: api-reference/models.md
+    - Exceptions: api-reference/exceptions.md
+  - Contributing: contributing.md
+  - Changelog: changelog.md
