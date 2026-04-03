@@ -160,18 +160,18 @@ class TestSyncClientGetOHLCV:
         mock_provider.get_ohlcv.assert_not_called()
         assert len(result) == 3
 
-    def test_get_ohlcv_raises_provider_unavailable_when_all_fail(
-        self, tmp_path: object
-    ) -> None:
+    def test_get_ohlcv_raises_provider_unavailable_when_all_fail(self, tmp_path: object) -> None:
         client = _make_client(tmp_path)
 
         mock_provider = MagicMock()
         mock_provider.name = "yfinance"
         mock_provider.get_ohlcv.side_effect = ProviderUnavailableError("down", provider="yfinance")
 
-        with patch.object(client._selector, "select", return_value=[mock_provider]):
-            with pytest.raises(ProviderUnavailableError):
-                client.get_ohlcv("AAPL", "1d", "2024-01-01", "2024-01-02")
+        with (
+            patch.object(client._selector, "select", return_value=[mock_provider]),
+            pytest.raises(ProviderUnavailableError),
+        ):
+            client.get_ohlcv("AAPL", "1d", "2024-01-01", "2024-01-02")
 
     def test_get_ohlcv_raises_ticker_not_found(self, tmp_path: object) -> None:
         client = _make_client(tmp_path)
@@ -182,9 +182,11 @@ class TestSyncClientGetOHLCV:
             "No FAKE", provider="yfinance", ticker="FAKE"
         )
 
-        with patch.object(client._selector, "select", return_value=[mock_provider]):
-            with pytest.raises(TickerNotFoundError):
-                client.get_ohlcv("FAKE", "1d", "2024-01-01", "2024-01-02")
+        with (
+            patch.object(client._selector, "select", return_value=[mock_provider]),
+            pytest.raises(TickerNotFoundError),
+        ):
+            client.get_ohlcv("FAKE", "1d", "2024-01-01", "2024-01-02")
 
 
 # ---------------------------------------------------------------------------
@@ -215,9 +217,11 @@ class TestSyncClientGetQuote:
         mock_provider.name = "yfinance"
         mock_provider.get_quote.side_effect = ProviderUnavailableError("down", provider="yfinance")
 
-        with patch.object(client._selector, "select", return_value=[mock_provider]):
-            with pytest.raises(ProviderUnavailableError):
-                client.get_quote("AAPL")
+        with (
+            patch.object(client._selector, "select", return_value=[mock_provider]),
+            pytest.raises(ProviderUnavailableError),
+        ):
+            client.get_quote("AAPL")
 
 
 # ---------------------------------------------------------------------------

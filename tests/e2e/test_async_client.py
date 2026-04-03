@@ -157,9 +157,11 @@ class TestAsyncClientGetOHLCV:
         mock_provider = _mock_async_provider()
         mock_provider.async_get_ohlcv.side_effect = ProviderUnavailableError("down", provider="p")
 
-        with patch.object(client._selector, "select", return_value=[mock_provider]):
-            with pytest.raises(ProviderUnavailableError):
-                await client.get_ohlcv("AAPL", "1d", "2024-01-01", "2024-01-02")
+        with (
+            patch.object(client._selector, "select", return_value=[mock_provider]),
+            pytest.raises(ProviderUnavailableError),
+        ):
+            await client.get_ohlcv("AAPL", "1d", "2024-01-01", "2024-01-02")
 
     async def test_get_ohlcv_raises_ticker_not_found(self, tmp_path: object) -> None:
         client = _make_client(tmp_path)
@@ -169,9 +171,11 @@ class TestAsyncClientGetOHLCV:
             "No FAKE", provider="yfinance", ticker="FAKE"
         )
 
-        with patch.object(client._selector, "select", return_value=[mock_provider]):
-            with pytest.raises(TickerNotFoundError):
-                await client.get_ohlcv("FAKE", "1d", "2024-01-01", "2024-01-02")
+        with (
+            patch.object(client._selector, "select", return_value=[mock_provider]),
+            pytest.raises(TickerNotFoundError),
+        ):
+            await client.get_ohlcv("FAKE", "1d", "2024-01-01", "2024-01-02")
 
 
 # ---------------------------------------------------------------------------
@@ -199,9 +203,11 @@ class TestAsyncClientGetQuote:
         mock_provider = _mock_async_provider()
         mock_provider.async_get_quote.side_effect = ProviderUnavailableError("down", provider="p")
 
-        with patch.object(client._selector, "select", return_value=[mock_provider]):
-            with pytest.raises(ProviderUnavailableError):
-                await client.get_quote("AAPL")
+        with (
+            patch.object(client._selector, "select", return_value=[mock_provider]),
+            pytest.raises(ProviderUnavailableError),
+        ):
+            await client.get_quote("AAPL")
 
 
 # ---------------------------------------------------------------------------

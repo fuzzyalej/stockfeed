@@ -2,7 +2,6 @@
 
 [![PyPI version](https://img.shields.io/pypi/v/stockfeed.svg)](https://pypi.org/project/stockfeed/)
 [![Python versions](https://img.shields.io/pypi/pyversions/stockfeed.svg)](https://pypi.org/project/stockfeed/)
-[![CI](https://github.com/your-org/stockfeed/actions/workflows/ci.yml/badge.svg)](https://github.com/your-org/stockfeed/actions/workflows/ci.yml)
 [![Coverage](https://img.shields.io/badge/coverage-91%25-brightgreen.svg)](https://github.com/your-org/stockfeed)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 

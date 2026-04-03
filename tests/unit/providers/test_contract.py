@@ -160,16 +160,12 @@ class TestStubProviderContract:
     _START = datetime(2024, 1, 1, tzinfo=timezone.utc)
     _END = datetime(2024, 1, 31, tzinfo=timezone.utc)
 
-    def test_get_ohlcv_raises_not_implemented(
-        self, provider_class: type[AbstractProvider]
-    ) -> None:
+    def test_get_ohlcv_raises_not_implemented(self, provider_class: type[AbstractProvider]) -> None:
         p = _instantiate(provider_class)
         with pytest.raises(NotImplementedError):
             p.get_ohlcv("AAPL", Interval.ONE_DAY, self._START, self._END)
 
-    def test_get_quote_raises_not_implemented(
-        self, provider_class: type[AbstractProvider]
-    ) -> None:
+    def test_get_quote_raises_not_implemented(self, provider_class: type[AbstractProvider]) -> None:
         p = _instantiate(provider_class)
         with pytest.raises(NotImplementedError):
             p.get_quote("AAPL")
@@ -230,14 +226,14 @@ class TestImplementedProviderReturnTypes:
         self, provider_class: type[AbstractProvider], respx_mock: object
     ) -> None:
         """health_check() must return a HealthStatus (mocked HTTP where needed)."""
-        import respx
         import httpx
+        import respx
 
         p = _instantiate(provider_class)
 
         if provider_class is YFinanceProvider:
             # yfinance uses the yf library, not HTTP — patch at module level
-            from unittest.mock import patch, MagicMock
+            from unittest.mock import MagicMock, patch
 
             mock_ticker = MagicMock()
             mock_ticker.info = {"symbol": "AAPL", "bid": 185.0}
@@ -262,8 +258,8 @@ class TestImplementedProviderReturnTypes:
         self, provider_class: type[AbstractProvider]
     ) -> None:
         """async_health_check() delegates to health_check() via asyncio.to_thread."""
-        from unittest.mock import patch, MagicMock
         from datetime import datetime, timezone
+        from unittest.mock import patch
 
         p = _instantiate(provider_class)
         mock_status = HealthStatus(
@@ -283,9 +279,9 @@ class TestImplementedProviderReturnTypes:
         self, provider_class: type[AbstractProvider]
     ) -> None:
         """async_get_ohlcv must delegate to get_ohlcv (via asyncio.to_thread)."""
-        from unittest.mock import patch
         from datetime import datetime, timezone
         from decimal import Decimal
+        from unittest.mock import patch
 
         p = _instantiate(provider_class)
         dummy_bar = OHLCVBar(
@@ -315,8 +311,8 @@ class TestImplementedProviderReturnTypes:
         self, provider_class: type[AbstractProvider]
     ) -> None:
         """async_get_quote must delegate to get_quote."""
-        from unittest.mock import patch
         from decimal import Decimal
+        from unittest.mock import patch
 
         p = _instantiate(provider_class)
         dummy_quote = Quote(
@@ -346,15 +342,21 @@ class TestImplementedProviderReturnTypes:
     ) -> None:
         """async_get_ticker_info must delegate to get_ticker_info.
 
-        Tradier explicitly raises NotImplementedError for ticker_info (it uses
-        yfinance as a fallback at the client level), so that case is skipped.
+        Tradier raises NotImplementedError for ticker_info (the client falls
+        back to yfinance at a higher level). Verify that the async method
+        propagates the NotImplementedError faithfully rather than silently
+        swallowing it.
         """
         from unittest.mock import patch
 
-        if provider_class is TradierProvider:
-            pytest.skip("Tradier delegates ticker_info to yfinance; not a contract violation")
-
         p = _instantiate(provider_class)
+
+        if provider_class is TradierProvider:
+            # async_get_ticker_info should propagate the NotImplementedError
+            with pytest.raises(NotImplementedError):
+                await p.async_get_ticker_info("AAPL")
+            return
+
         dummy_info = TickerInfo(
             ticker="AAPL",
             name="Apple Inc.",

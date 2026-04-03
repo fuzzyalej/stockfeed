@@ -8,7 +8,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from stockfeed.cache.manager import CacheManager
 from stockfeed.client import StockFeedClient
 from stockfeed.config import StockFeedSettings
 from stockfeed.exceptions import ProviderRateLimitError, ProviderUnavailableError
@@ -77,7 +76,9 @@ class TestFailoverChain:
         succeeding_provider.supported_intervals = list(Interval)
         succeeding_provider.get_ohlcv.return_value = bars
 
-        with patch.object(client._selector, "select", return_value=[failing_provider, succeeding_provider]):
+        with patch.object(
+            client._selector, "select", return_value=[failing_provider, succeeding_provider]
+        ):
             result = client.get_ohlcv("AAPL", "1d", "2024-01-01", "2024-01-04")
 
         # yfinance was called after the first provider failed
@@ -98,9 +99,11 @@ class TestFailoverChain:
         failing2.name = "p2"
         failing2.get_ohlcv.side_effect = ProviderUnavailableError("fail2", provider="p2")
 
-        with patch.object(client._selector, "select", return_value=[failing1, failing2]):
-            with pytest.raises(ProviderUnavailableError):
-                client.get_ohlcv("AAPL", "1d", "2024-01-01", "2024-01-04")
+        with (
+            patch.object(client._selector, "select", return_value=[failing1, failing2]),
+            pytest.raises(ProviderUnavailableError),
+        ):
+            client.get_ohlcv("AAPL", "1d", "2024-01-01", "2024-01-04")
 
     def test_rate_limit_error_causes_failover(self, tmp_path: object) -> None:
         """A rate-limited provider should cause the client to try the next one."""
@@ -133,17 +136,17 @@ class TestFailoverChain:
 
         auth_failing = MagicMock()
         auth_failing.name = "auth_failing"
-        auth_failing.get_ohlcv.side_effect = ProviderAuthError(
-            "Bad key", provider="auth_failing"
-        )
+        auth_failing.get_ohlcv.side_effect = ProviderAuthError("Bad key", provider="auth_failing")
 
         fallback = MagicMock()
         fallback.name = "fallback"
         fallback.get_ohlcv.return_value = [_make_bar()]
 
-        with patch.object(client._selector, "select", return_value=[auth_failing, fallback]):
-            with pytest.raises(ProviderAuthError):
-                client.get_ohlcv("AAPL", "1d", "2024-01-01", "2024-01-02")
+        with (
+            patch.object(client._selector, "select", return_value=[auth_failing, fallback]),
+            pytest.raises(ProviderAuthError),
+        ):
+            client.get_ohlcv("AAPL", "1d", "2024-01-01", "2024-01-02")
 
         # Fallback must NOT have been called
         fallback.get_ohlcv.assert_not_called()

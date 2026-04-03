@@ -91,13 +91,15 @@ class TestStreamQuoteE2E:
             call_count += 1
             return q
 
-        with patch.object(client, "get_quote", side_effect=fake_get_quote):
-            with patch("asyncio.sleep", new=AsyncMock()):
-                collected = []
-                async for q in client.stream_quote("AAPL", interval=0.001):
-                    collected.append(q)
-                    if len(collected) >= 3:
-                        break
+        with (
+            patch.object(client, "get_quote", side_effect=fake_get_quote),
+            patch("asyncio.sleep", new=AsyncMock()),
+        ):
+            collected = []
+            async for q in client.stream_quote("AAPL", interval=0.001):
+                collected.append(q)
+                if len(collected) >= 3:
+                    break
 
         assert len(collected) == 3
         assert all(isinstance(q, Quote) for q in collected)
@@ -109,10 +111,12 @@ class TestStreamQuoteE2E:
         async def fail_auth(ticker: str, provider: str | None = None) -> Quote:
             raise ProviderAuthError("bad key", provider="yfinance")
 
-        with patch.object(client, "get_quote", side_effect=fail_auth):
-            with pytest.raises(ProviderAuthError):
-                async for _ in client.stream_quote("AAPL"):
-                    pass
+        with (
+            patch.object(client, "get_quote", side_effect=fail_auth),
+            pytest.raises(ProviderAuthError),
+        ):
+            async for _ in client.stream_quote("AAPL"):
+                pass
 
     async def test_stream_propagates_ticker_not_found(self, tmp_path: object) -> None:
         """TickerNotFoundError terminates the stream immediately."""
@@ -121,10 +125,12 @@ class TestStreamQuoteE2E:
         async def fail_not_found(ticker: str, provider: str | None = None) -> Quote:
             raise TickerNotFoundError("no such ticker", ticker="FAKE", provider="yfinance")
 
-        with patch.object(client, "get_quote", side_effect=fail_not_found):
-            with pytest.raises(TickerNotFoundError):
-                async for _ in client.stream_quote("FAKE"):
-                    pass
+        with (
+            patch.object(client, "get_quote", side_effect=fail_not_found),
+            pytest.raises(TickerNotFoundError),
+        ):
+            async for _ in client.stream_quote("FAKE"):
+                pass
 
     async def test_stream_retries_on_transient_error(self, tmp_path: object) -> None:
         """A single ProviderUnavailableError is retried; the next successful call yields."""
@@ -144,13 +150,15 @@ class TestStreamQuoteE2E:
                 raise result
             return result  # type: ignore[return-value]
 
-        with patch.object(client, "get_quote", side_effect=flaky):
-            with patch("asyncio.sleep", new=AsyncMock()):
-                collected = []
-                async for q in client.stream_quote("AAPL", max_errors=5):
-                    collected.append(q)
-                    if len(collected) >= 1:
-                        break
+        with (
+            patch.object(client, "get_quote", side_effect=flaky),
+            patch("asyncio.sleep", new=AsyncMock()),
+        ):
+            collected = []
+            async for q in client.stream_quote("AAPL", max_errors=5):
+                collected.append(q)
+                if len(collected) >= 1:
+                    break
 
         assert len(collected) == 1
         assert isinstance(collected[0], Quote)
@@ -162,11 +170,13 @@ class TestStreamQuoteE2E:
         async def always_fail(ticker: str, provider: str | None = None) -> Quote:
             raise ProviderUnavailableError("down", provider="yfinance")
 
-        with patch.object(client, "get_quote", side_effect=always_fail):
-            with patch("asyncio.sleep", new=AsyncMock()):
-                with pytest.raises(ProviderUnavailableError):
-                    async for _ in client.stream_quote("AAPL", max_errors=3):
-                        pass
+        with (
+            patch.object(client, "get_quote", side_effect=always_fail),
+            patch("asyncio.sleep", new=AsyncMock()),
+            pytest.raises(ProviderUnavailableError),
+        ):
+            async for _ in client.stream_quote("AAPL", max_errors=3):
+                pass
 
 
 # ---------------------------------------------------------------------------
@@ -180,19 +190,19 @@ class TestSimulatorE2E:
         client = _make_client(tmp_path, dev_mode=True)
         bars = [_make_bar(i) for i in range(5)]
 
-        with patch.object(client, "get_ohlcv", new=AsyncMock(return_value=bars)):
-            with patch("asyncio.sleep", new=AsyncMock()):
-                collected = []
-                async for bar in client.simulate("AAPL", "2024-01-01", "2024-01-06", "1d", speed=0):
-                    collected.append(bar)
+        with (
+            patch.object(client, "get_ohlcv", new=AsyncMock(return_value=bars)),
+            patch("asyncio.sleep", new=AsyncMock()),
+        ):
+            collected = []
+            async for bar in client.simulate("AAPL", "2024-01-01", "2024-01-06", "1d", speed=0):
+                collected.append(bar)
 
         assert len(collected) == 5
         timestamps = [b.timestamp for b in collected]
         assert timestamps == sorted(timestamps)
 
-    async def test_simulate_raises_dev_mode_error_when_disabled(
-        self, tmp_path: object
-    ) -> None:
+    async def test_simulate_raises_dev_mode_error_when_disabled(self, tmp_path: object) -> None:
         """simulate() raises DevModeError when dev_mode is False."""
         client = _make_client(tmp_path, dev_mode=False)
 
@@ -205,10 +215,12 @@ class TestSimulatorE2E:
         client = _make_client(tmp_path, dev_mode=True)
         bars = [_make_bar(i) for i in range(3)]
 
-        with patch.object(client, "get_ohlcv", new=AsyncMock(return_value=bars)):
-            with patch("asyncio.sleep", new=AsyncMock()) as mock_sleep:
-                async for _ in client.simulate("AAPL", "2024-01-01", "2024-01-04", "1d", speed=0):
-                    pass
+        with (
+            patch.object(client, "get_ohlcv", new=AsyncMock(return_value=bars)),
+            patch("asyncio.sleep", new=AsyncMock()) as mock_sleep,
+        ):
+            async for _ in client.simulate("AAPL", "2024-01-01", "2024-01-04", "1d", speed=0):
+                pass
 
         mock_sleep.assert_not_called()
 
@@ -217,11 +229,13 @@ class TestSimulatorE2E:
         client = _make_client(tmp_path, dev_mode=True)
         bars = [_make_bar()]
 
-        with patch.object(client, "get_ohlcv", new=AsyncMock(return_value=bars)):
-            with patch("asyncio.sleep", new=AsyncMock()):
-                collected = []
-                async for bar in client.simulate("AAPL", "2024-01-01", "2024-01-02", "1d", speed=0):
-                    collected.append(bar)
+        with (
+            patch.object(client, "get_ohlcv", new=AsyncMock(return_value=bars)),
+            patch("asyncio.sleep", new=AsyncMock()),
+        ):
+            collected = []
+            async for bar in client.simulate("AAPL", "2024-01-01", "2024-01-02", "1d", speed=0):
+                collected.append(bar)
 
         assert len(collected) == 1
 
@@ -230,12 +244,12 @@ class TestSimulatorE2E:
         client = _make_client(tmp_path, dev_mode=True)
         bars = [_make_bar(i) for i in range(10)]
 
-        with patch.object(client, "get_ohlcv", new=AsyncMock(return_value=bars)):
-            with patch("asyncio.sleep", new=AsyncMock()):
-                collected = []
-                async for bar in client.simulate(
-                    "AAPL", "2024-01-01", "2024-01-11", "1d", speed=0
-                ):
-                    collected.append(bar)
+        with (
+            patch.object(client, "get_ohlcv", new=AsyncMock(return_value=bars)),
+            patch("asyncio.sleep", new=AsyncMock()),
+        ):
+            collected = []
+            async for bar in client.simulate("AAPL", "2024-01-01", "2024-01-11", "1d", speed=0):
+                collected.append(bar)
 
         assert len(collected) == 10

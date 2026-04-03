@@ -20,6 +20,12 @@ dependencies = [
     "httpx-sse>=0.4",
 ]
 
+[project.urls]
+Homepage = "https://github.com/fuzzyalej/stockfeed"
+Repository = "https://github.com/fuzzyalej/stockfeed"
+Documentation = "https://fuzzyalej.github.io/stockfeed/"
+"Bug Tracker" = "https://github.com/fuzzyalej/stockfeed/issues"
+
 [project.optional-dependencies]
 dev = [
     "pytest",
