@@ -55,7 +55,9 @@ class RateLimiter:
         # Check if the window has expired
         if window_start is not None:
             now = datetime.now(timezone.utc)
-            elapsed = (now - window_start.replace(tzinfo=timezone.utc)).total_seconds()
+            if window_start.tzinfo is None:
+                window_start = window_start.replace(tzinfo=timezone.utc)
+            elapsed = (now - window_start).total_seconds()
             if elapsed >= window_seconds:
                 return True  # Window expired
         return int(requests_made) < int(limit_per_window)

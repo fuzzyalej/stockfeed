@@ -48,3 +48,41 @@ class TestMarketHoursChecker:
     def test_should_use_cache_four_hours_open(self) -> None:
         with patch.object(self.checker, "is_market_open", return_value=True):
             assert self.checker.should_use_cache(Interval.FOUR_HOURS) is False
+
+    def test_is_market_open_returns_bool(self) -> None:
+        # Does not raise; weekend is closed
+        result = self.checker.is_market_open("XNYS",
+            dt=datetime(2024, 1, 6, 12, 0, tzinfo=timezone.utc))  # Saturday
+        assert isinstance(result, bool)
+        assert result is False
+
+    def test_is_market_open_weekday_outside_hours(self) -> None:
+        # 3am UTC on a Tuesday = well outside NYSE hours
+        result = self.checker.is_market_open("XNYS",
+            dt=datetime(2024, 1, 2, 3, 0, tzinfo=timezone.utc))
+        assert isinstance(result, bool)
+
+    def test_is_market_open_with_mapped_exchange(self) -> None:
+        # NMS maps to XNAS
+        result = self.checker.is_market_open("NMS",
+            dt=datetime(2024, 1, 6, 12, 0, tzinfo=timezone.utc))  # Saturday
+        assert result is False
+
+    def test_get_calendar_caches_result(self) -> None:
+        cal1 = self.checker._get_calendar("XNYS")
+        cal2 = self.checker._get_calendar("XNYS")
+        assert cal1 is cal2
+
+    def test_get_calendar_unknown_falls_back(self) -> None:
+        # Should not raise; uses default
+        cal = self.checker._get_calendar("UNKNOWN_EXCHANGE_XYZ")
+        assert cal is not None
+
+    def test_should_use_cache_with_dt(self) -> None:
+        # Pass a specific dt to exercise the dt code path
+        result = self.checker.should_use_cache(
+            Interval.ONE_DAY,
+            exchange="XNYS",
+            dt=datetime(2024, 1, 2, 12, 0, tzinfo=timezone.utc),
+        )
+        assert result is True  # ONE_DAY always uses cache

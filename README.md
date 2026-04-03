@@ -12,7 +12,7 @@ Unified market data access for Python — stocks, futures, options, and crypto.
 - **Dual interface** — `StockFeedClient` (sync) and `AsyncStockFeedClient` (async) with identical method surfaces
 - **Canonical models** — every provider returns the same `OHLCVBar`, `Quote`, and `TickerInfo` types
 - **Both adjusted and raw prices** — `OHLCVBar.close_raw` and `OHLCVBar.close_adj` are always separate fields
-- **Fully typed** — passes `mypy --strict` across all 47 source files
+- **Fully typed** — passes `mypy --strict` across all 50 source files
 
 ## Installation
 
@@ -28,16 +28,16 @@ pip install "stockfeed[streaming]"   # SSE streaming support
 
 ## Quick start
 
-### OHLCV bars (yfinance — no API key needed)
+### OHLCV bars (no API key needed)
 
 ```python
 from datetime import datetime, timezone
+from stockfeed import StockFeedClient
 from stockfeed.models.interval import Interval
-from stockfeed.providers.yfinance.provider import YFinanceProvider
 
-provider = YFinanceProvider()
+client = StockFeedClient()
 
-bars = provider.get_ohlcv(
+bars = client.get_ohlcv(
     "AAPL",
     Interval.ONE_DAY,
     start=datetime(2024, 1, 1, tzinfo=timezone.utc),
@@ -54,39 +54,15 @@ for bar in bars:
 ### Quote and company info
 
 ```python
-from stockfeed.providers.yfinance.provider import YFinanceProvider
+from stockfeed import StockFeedClient
 
-provider = YFinanceProvider()
+client = StockFeedClient()
 
-quote = provider.get_quote("MSFT")
+quote = client.get_quote("MSFT")
 print(quote.last, quote.bid, quote.ask)
 
-info = provider.get_ticker_info("MSFT")
+info = client.get_ticker_info("MSFT")
 print(info.name, info.sector, info.market_cap)
-```
-
-### Cache-first access
-
-```python
-from stockfeed.cache.manager import CacheManager
-from stockfeed.models.interval import Interval
-from stockfeed.providers.yfinance.provider import YFinanceProvider
-from datetime import datetime, timezone
-
-cache = CacheManager()          # default: ~/.stockfeed/cache.db
-provider = YFinanceProvider()
-
-start = datetime(2024, 1, 1, tzinfo=timezone.utc)
-end   = datetime(2024, 3, 31, tzinfo=timezone.utc)
-
-# First call: miss → fetch → store
-bars = cache.read("AAPL", Interval.ONE_DAY, start, end)
-if bars is None:
-    bars = provider.get_ohlcv("AAPL", Interval.ONE_DAY, start, end)
-    cache.write(bars)
-
-# Second call: hit → DuckDB only, no network
-bars = cache.read("AAPL", Interval.ONE_DAY, bars[0].timestamp, bars[-1].timestamp)
 ```
 
 ### Async — fetch multiple tickers concurrently
@@ -94,14 +70,13 @@ bars = cache.read("AAPL", Interval.ONE_DAY, bars[0].timestamp, bars[-1].timestam
 ```python
 import asyncio
 from datetime import datetime, timezone
+from stockfeed import AsyncStockFeedClient
 from stockfeed.models.interval import Interval
-from stockfeed.providers.yfinance.provider import YFinanceProvider
-
-provider = YFinanceProvider()
 
 async def main():
+    client = AsyncStockFeedClient()
     tasks = [
-        provider.async_get_ohlcv(t, Interval.ONE_DAY,
+        client.get_ohlcv(t, Interval.ONE_DAY,
             datetime(2024, 6, 1, tzinfo=timezone.utc),
             datetime(2024, 6, 30, tzinfo=timezone.utc))
         for t in ["AAPL", "MSFT", "GOOGL", "AMZN"]
@@ -116,18 +91,20 @@ asyncio.run(main())
 ### Using a paid provider (Tiingo)
 
 ```python
-from stockfeed.providers.tiingo.provider import TiingoProvider
+from stockfeed import StockFeedClient, StockFeedSettings
 from stockfeed.exceptions import ProviderAuthError, TickerNotFoundError
 from stockfeed.models.interval import Interval
 from datetime import datetime, timezone
 
-provider = TiingoProvider(api_key="your_tiingo_key")
-# Or set STOCKFEED_TIINGO_API_KEY in env / .env and read via StockFeedSettings
+settings = StockFeedSettings(tiingo_api_key="your_tiingo_key")
+# Or set STOCKFEED_TIINGO_API_KEY in env / .env
+client = StockFeedClient(settings=settings)
 
 try:
-    bars = provider.get_ohlcv("SPY", Interval.ONE_DAY,
+    bars = client.get_ohlcv("SPY", Interval.ONE_DAY,
         start=datetime(2024, 1, 1, tzinfo=timezone.utc),
-        end=datetime(2024, 1, 10, tzinfo=timezone.utc))
+        end=datetime(2024, 1, 10, tzinfo=timezone.utc),
+        provider="tiingo")
 except ProviderAuthError:
     print("Check your API key")
 except TickerNotFoundError as e:
@@ -217,15 +194,15 @@ Providers without API keys configured are skipped during selection. yfinance is 
 All exceptions inherit from `StockFeedError` and carry structured context:
 
 ```python
-from stockfeed.providers.yfinance.provider import YFinanceProvider
+from stockfeed import StockFeedClient
 from stockfeed.exceptions import TickerNotFoundError, ProviderUnavailableError
 from stockfeed.models.interval import Interval
 from datetime import datetime, timezone
 
-provider = YFinanceProvider()
+client = StockFeedClient()
 
 try:
-    bars = provider.get_ohlcv("INVALID", Interval.ONE_DAY,
+    bars = client.get_ohlcv("INVALID", Interval.ONE_DAY,
         datetime(2024, 1, 1, tzinfo=timezone.utc),
         datetime(2024, 1, 31, tzinfo=timezone.utc))
 except TickerNotFoundError as e:
@@ -289,9 +266,9 @@ python examples/01_ohlcv_yfinance.py
 | Phase | Description | Status |
 |---|---|---|
 | 1 | Project scaffold, models, config, exceptions, cache schema | Done |
-| 2 | Provider abstraction layer, yfinance implementation, stub providers | Done |
+| 2 | Provider abstraction layer, yfinance + stub providers | Done |
 | 3 | Cache layer + HTTP providers (Tiingo, Finnhub, Twelve Data, Alpaca, Tradier) | Done |
-| 4 | Sync & async clients, failover logic | Planned |
+| 4 | Sync & async clients, failover logic, ≥90% test coverage | Done |
 | 5 | SSE streaming | Planned |
 | 6 | Dev mode, CLI, MkDocs | Planned |
 

@@ -297,3 +297,80 @@ def test_stub_providers_raise_not_implemented(provider_class: type) -> None:
             datetime(2024, 1, 1, tzinfo=timezone.utc),
             datetime(2024, 1, 9, tzinfo=timezone.utc),
         )
+
+
+# ---------------------------------------------------------------------------
+# Async method coverage
+# ---------------------------------------------------------------------------
+
+
+class TestYFinanceProviderAsync:
+    """Async wrappers just call to_thread — smoke-test that they run."""
+
+    def test_async_get_ohlcv_delegates_to_sync(self) -> None:
+        import asyncio
+        from datetime import datetime, timezone
+        from unittest.mock import patch
+
+        from stockfeed.models.interval import Interval
+        from stockfeed.providers.yfinance.provider import YFinanceProvider
+
+        p = YFinanceProvider()
+        bars = []  # empty but valid list
+
+        async def _run():
+            with patch.object(p, "get_ohlcv", return_value=bars):
+                result = await p.async_get_ohlcv(
+                    "AAPL", Interval.ONE_DAY,
+                    datetime(2024, 1, 1, tzinfo=timezone.utc),
+                    datetime(2024, 1, 31, tzinfo=timezone.utc),
+                )
+            return result
+
+        result = asyncio.run(_run())
+        assert result == bars
+
+    def test_async_get_quote_delegates_to_sync(self) -> None:
+        import asyncio
+        from unittest.mock import MagicMock, patch
+
+        from stockfeed.providers.yfinance.provider import YFinanceProvider
+
+        p = YFinanceProvider()
+        mock_quote = MagicMock()
+
+        async def _run():
+            with patch.object(p, "get_quote", return_value=mock_quote):
+                return await p.async_get_quote("AAPL")
+
+        assert asyncio.run(_run()) is mock_quote
+
+    def test_async_get_ticker_info_delegates_to_sync(self) -> None:
+        import asyncio
+        from unittest.mock import MagicMock, patch
+
+        from stockfeed.providers.yfinance.provider import YFinanceProvider
+
+        p = YFinanceProvider()
+        mock_info = MagicMock()
+
+        async def _run():
+            with patch.object(p, "get_ticker_info", return_value=mock_info):
+                return await p.async_get_ticker_info("AAPL")
+
+        assert asyncio.run(_run()) is mock_info
+
+    def test_async_health_check_delegates_to_sync(self) -> None:
+        import asyncio
+        from unittest.mock import MagicMock, patch
+
+        from stockfeed.providers.yfinance.provider import YFinanceProvider
+
+        p = YFinanceProvider()
+        mock_status = MagicMock()
+
+        async def _run():
+            with patch.object(p, "health_check", return_value=mock_status):
+                return await p.async_health_check()
+
+        assert asyncio.run(_run()) is mock_status

@@ -185,3 +185,102 @@ class TestTradierProvider:
             status = self.provider.health_check()
         assert status.healthy is False
         assert status.error is not None
+
+
+# ---------------------------------------------------------------------------
+# Additional coverage tests
+# ---------------------------------------------------------------------------
+
+
+class TestTradierNormalizerAdditional:
+    def setup_method(self) -> None:
+        self.n = TradierNormalizer()
+
+    def test_normalize_ohlcv_invalid_raw_raises(self) -> None:
+        from stockfeed.exceptions import ValidationError
+        with pytest.raises(ValidationError):
+            self.n.normalize_ohlcv("not_a_tuple")
+
+    def test_normalize_ohlcv_empty_data_raises(self) -> None:
+        from stockfeed.exceptions import ValidationError
+        with pytest.raises(ValidationError):
+            self.n.normalize_ohlcv((None, "AAPL", Interval.ONE_DAY, False))
+
+    def test_normalize_ohlcv_intraday(self) -> None:
+        row = {"time": "2024-01-02 09:30:00", "open": "185", "high": "186",
+               "low": "184", "close": "185.5", "volume": "1000"}
+        data = {"series": {"data": [row]}}
+        bars = self.n.normalize_ohlcv((data, "AAPL", Interval.ONE_MINUTE, True))
+        assert len(bars) >= 1
+        assert bars[0].interval == Interval.ONE_MINUTE
+
+    def test_normalize_ohlcv_intraday_single_row_dict(self) -> None:
+        """Tradier sometimes returns a single row as a dict instead of list."""
+        row = {"time": "2024-01-02 09:30:00", "open": "185", "high": "186",
+               "low": "184", "close": "185.5", "volume": "1000"}
+        data = {"series": {"data": row}}
+        bars = self.n.normalize_ohlcv((data, "AAPL", Interval.ONE_MINUTE, True))
+        assert len(bars) == 1
+
+    def test_normalize_ohlcv_empty_intraday_raises(self) -> None:
+        from stockfeed.exceptions import ValidationError
+        data = {"series": {"data": []}}
+        with pytest.raises(ValidationError):
+            self.n.normalize_ohlcv((data, "AAPL", Interval.ONE_MINUTE, True))
+
+    def test_normalize_ohlcv_daily_single_row_dict(self) -> None:
+        """Tradier may return single daily row as dict."""
+        row = {"date": "2024-01-02", "open": "185", "high": "186",
+               "low": "184", "close": "185.5", "volume": "1000"}
+        data = {"history": {"day": row}}
+        bars = self.n.normalize_ohlcv((data, "AAPL", Interval.ONE_DAY, False))
+        assert len(bars) == 1
+
+    def test_normalize_quote_invalid_raw_raises(self) -> None:
+        from stockfeed.exceptions import ValidationError
+        with pytest.raises(ValidationError):
+            self.n.normalize_quote("not_a_tuple")
+
+    def test_normalize_quote_empty_data_raises(self) -> None:
+        from stockfeed.exceptions import ValidationError
+        with pytest.raises(ValidationError):
+            self.n.normalize_quote((None, "AAPL"))
+
+    def test_normalize_ticker_info_raises_not_implemented(self) -> None:
+        with pytest.raises(NotImplementedError):
+            self.n.normalize_ticker_info(("data", "AAPL"))
+
+    def test_dec_none_returns_none(self) -> None:
+        from stockfeed.providers.tradier.normalizer import _dec
+        assert _dec(None) is None
+
+    def test_dec_invalid_returns_none(self) -> None:
+        from stockfeed.providers.tradier.normalizer import _dec
+        assert _dec("not_a_number") is None
+
+    def test_parse_dt_iso_format(self) -> None:
+        from datetime import timezone
+
+        from stockfeed.providers.tradier.normalizer import _parse_dt
+        dt = _parse_dt("2024-01-02T09:30:00")
+        assert dt.tzinfo == timezone.utc
+
+    def test_parse_dt_space_format(self) -> None:
+        from stockfeed.providers.tradier.normalizer import _parse_dt
+        dt = _parse_dt("2024-01-02 09:30:00")
+        assert dt.year == 2024
+
+    def test_parse_dt_with_z_suffix(self) -> None:
+        from datetime import timezone
+
+        from stockfeed.providers.tradier.normalizer import _parse_dt
+        dt = _parse_dt("2024-01-02T09:30:00Z")
+        assert dt.tzinfo == timezone.utc
+        assert dt.year == 2024
+
+    def test_parse_dt_iso_with_offset(self) -> None:
+        from datetime import timezone
+
+        from stockfeed.providers.tradier.normalizer import _parse_dt
+        dt = _parse_dt("2024-01-02T09:30:00+00:00")
+        assert dt.tzinfo == timezone.utc

@@ -39,8 +39,9 @@ CREATE TABLE IF NOT EXISTS rate_limit_state (
     updated_at       TIMESTAMPTZ DEFAULT now()
 );
 
+CREATE SEQUENCE IF NOT EXISTS provider_health_log_id_seq;
 CREATE TABLE IF NOT EXISTS provider_health_log (
-    id           INTEGER PRIMARY KEY,
+    id           BIGINT PRIMARY KEY DEFAULT nextval('provider_health_log_id_seq'),
     provider     VARCHAR NOT NULL,
     healthy      BOOLEAN,
     latency_ms   FLOAT,

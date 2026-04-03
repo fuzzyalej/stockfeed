@@ -19,6 +19,9 @@ class CoingeckoProvider(AbstractProvider):
     supported_intervals = list(Interval)
     requires_auth = True
 
+    def __init__(self, api_key: str = "") -> None:
+        self.api_key = api_key
+
     def get_ohlcv(
         self, ticker: str, interval: Interval, start: datetime, end: datetime
     ) -> list[OHLCVBar]:

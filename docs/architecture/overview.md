@@ -13,7 +13,7 @@
 
 ```
 ┌──────────────────────────────────────────┐
-│  StockFeedClient / AsyncStockFeedClient  │  ← public API (Phase 5)
+│  StockFeedClient / AsyncStockFeedClient  │  ← public API
 └─────────────────────┬────────────────────┘
                       │
          ┌────────────▼────────────┐
@@ -21,7 +21,7 @@
          └────────────┬────────────┘
                       │ ordered list of AbstractProvider
          ┌────────────▼────────────┐
-         │     CacheManager        │  read → miss → fetch → write (Phase 3)
+         │     CacheManager        │  read → miss → fetch → write
          └────────────┬────────────┘
                       │
      ┌────────────────▼────────────────┐
@@ -68,19 +68,19 @@ src/stockfeed/
 │   │   ├── provider.py
 │   │   └── normalizer.py
 │   │
-│   ├── tiingo/              # stub — raises NotImplementedError (Phase 4)
-│   ├── finnhub/             # stub
-│   ├── twelvedata/          # stub
-│   ├── alpaca/              # stub
-│   ├── tradier/             # stub
-│   └── coingecko/           # stub
+│   ├── tiingo/              # fully implemented (OHLCV, quote, ticker_info, health)
+│   ├── finnhub/             # fully implemented (OHLCV, quote, ticker_info, health)
+│   ├── twelvedata/          # fully implemented (OHLCV, quote, ticker_info, health)
+│   ├── alpaca/              # fully implemented (OHLCV, quote, ticker_info, health)
+│   ├── tradier/             # fully implemented (OHLCV, quote, health; ticker_info via yfinance)
+│   └── coingecko/           # scaffold only — methods raise NotImplementedError
 │
 ├── cache/
 │   ├── connection.py        # thread-safe DuckDB connection pool
 │   └── schema.py            # DDL — ohlcv_bars, rate_limit_state, health_log
 │
-├── streaming/               # SSE streaming (Phase 6)
-└── dev/                     # dev/simulation mode (Phase 7)
+├── streaming/               # SSE streaming (planned)
+└── dev/                     # dev/simulation mode (planned)
 ```
 
 ---
@@ -178,7 +178,7 @@ The client iterates this list and returns the first successful response.
 
 ---
 
-## Cache strategy (Phase 3)
+## Cache strategy
 
 ```
 request(ticker, interval, start, end)
