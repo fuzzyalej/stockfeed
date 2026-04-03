@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class StockFeedSettings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="STOCKFEED_", env_file=".env")
+    model_config = SettingsConfigDict(env_prefix="STOCKFEED_", env_file=".env", extra="ignore")
 
     # Provider API keys — all optional, presence determines availability
     tiingo_api_key: str | None = None
