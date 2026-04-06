@@ -230,8 +230,8 @@ class AlpacaProvider(AbstractProvider, AbstractOptionsProvider):
 
     def get_option_expirations(self, ticker: str) -> list[date]:
         """Return unique, sorted expiration dates available for *ticker*."""
-        all_contracts: list[dict] = []
-        params: dict[str, object] = {
+        all_contracts: list[dict[str, object]] = []
+        params: dict[str, str | int] = {
             "underlying_symbols": ticker,
             "limit": 1000,
         }
@@ -245,13 +245,13 @@ class AlpacaProvider(AbstractProvider, AbstractOptionsProvider):
                 if not next_token:
                     break
                 params = dict(params)
-                params["page_token"] = next_token
+                params["page_token"] = str(next_token)
         return self._options_normalizer.normalize_expirations({"option_contracts": all_contracts})
 
     def get_options_chain(self, ticker: str, expiration: date) -> OptionChain:
         """Return all contracts for *ticker* at *expiration*."""
         merged_snapshots: dict[str, object] = {}
-        params: dict[str, object] = {
+        params: dict[str, str | int] = {
             "expiration_date": expiration.isoformat(),
             "limit": 1000,
             "feed": "indicative",
@@ -267,7 +267,7 @@ class AlpacaProvider(AbstractProvider, AbstractOptionsProvider):
                 if not next_token:
                     break
                 params = dict(params)
-                params["page_token"] = next_token
+                params["page_token"] = str(next_token)
         return self._options_normalizer.normalize_chain(ticker, expiration, merged_snapshots)
 
     def get_option_quote(self, symbol: str) -> OptionQuote:
@@ -276,7 +276,7 @@ class AlpacaProvider(AbstractProvider, AbstractOptionsProvider):
         if not m:
             raise ValueError(f"Cannot parse OCC symbol: {symbol!r}")
         underlying = m.group(1)
-        params: dict[str, object] = {
+        params: dict[str, str | int] = {
             "symbols": symbol,
             "feed": "indicative",
         }

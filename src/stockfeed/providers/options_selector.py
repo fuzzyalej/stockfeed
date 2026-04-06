@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from stockfeed.providers.base_options import AbstractOptionsProvider
 
@@ -42,7 +42,7 @@ class OptionsProviderSelector:
     def select(
         self,
         preferred: str | None = None,
-    ) -> list[AbstractProvider]:
+    ) -> list[AbstractOptionsProvider]:
         """Return an ordered list of options-capable provider instances.
 
         Order: preferred (if given) → auth-configured non-rate-limited
@@ -55,14 +55,14 @@ class OptionsProviderSelector:
             if issubclass(cls, AbstractOptionsProvider)
         }
 
-        ordered: list[AbstractProvider] = []
+        ordered: list[AbstractOptionsProvider] = []
         seen: set[str] = set()
 
         # 1. Preferred first
         if preferred and preferred in options_providers:
             instance = self._instantiate(options_providers[preferred])
             if instance is not None:
-                ordered.append(instance)
+                ordered.append(cast(AbstractOptionsProvider, instance))
                 seen.add(preferred)
 
         # 2. Auth-configured (or not requiring auth), not rate-limited,
@@ -87,14 +87,14 @@ class OptionsProviderSelector:
         for _, name, cls in candidates:
             instance = self._instantiate(cls)
             if instance is not None:
-                ordered.append(instance)
+                ordered.append(cast(AbstractOptionsProvider, instance))
                 seen.add(name)
 
         # 3. yfinance always last
         if "yfinance" in options_providers and "yfinance" not in seen:
             instance = self._instantiate(options_providers["yfinance"])
             if instance is not None:
-                ordered.append(instance)
+                ordered.append(cast(AbstractOptionsProvider, instance))
 
         return ordered
 
@@ -107,7 +107,7 @@ class OptionsProviderSelector:
         }
         return bool(key_map.get(provider_name))
 
-    def _instantiate(self, cls: type) -> AbstractProvider | None:
+    def _instantiate(self, cls: type[AbstractProvider]) -> AbstractProvider | None:
         """Instantiate a provider class with credentials from settings."""
         name = cls.name
         s = self._settings

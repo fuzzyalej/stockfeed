@@ -37,7 +37,7 @@ class FinnhubOptionsNormalizer:
         self,
         underlying: str,
         expiration: date,
-        raw: dict,
+        raw: dict[str, Any],
         underlying_price: Decimal | None = None,
     ) -> OptionChain:
         """Convert a Finnhub option-chain response to an OptionChain.
@@ -55,7 +55,7 @@ class FinnhubOptionsNormalizer:
             If ``None``, greeks will not be calculated.
         """
         exp_str = expiration.isoformat()
-        data_blocks: list[dict] = raw.get("data") or []
+        data_blocks: list[dict[str, Any]] = raw.get("data") or []
 
         matching = [block for block in data_blocks if block.get("expirationDate") == exp_str]
         if not matching:
@@ -67,9 +67,9 @@ class FinnhubOptionsNormalizer:
 
         contracts: list[OptionContract] = []
         for block in matching:
-            options: dict = block.get("options") or {}
-            calls: list[dict] = options.get("CALL") or []
-            puts: list[dict] = options.get("PUT") or []
+            options: dict[str, Any] = block.get("options") or {}
+            calls: list[dict[str, Any]] = options.get("CALL") or []
+            puts: list[dict[str, Any]] = options.get("PUT") or []
 
             for raw_contract in calls:
                 contracts.append(
@@ -97,7 +97,7 @@ class FinnhubOptionsNormalizer:
 
     def _raw_to_contract(
         self,
-        raw: dict,
+        raw: dict[str, Any],
         underlying: str,
         expiration: date,
         option_type: OptionType,
