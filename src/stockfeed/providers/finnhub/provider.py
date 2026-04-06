@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import time
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
+from decimal import Decimal
 
 import httpx
 
@@ -17,10 +18,13 @@ from stockfeed.exceptions import (
 from stockfeed.models.health import HealthStatus
 from stockfeed.models.interval import Interval
 from stockfeed.models.ohlcv import OHLCVBar
+from stockfeed.models.options import OptionChain, OptionQuote
 from stockfeed.models.quote import Quote
 from stockfeed.models.ticker import TickerInfo
 from stockfeed.providers.base import AbstractProvider
+from stockfeed.providers.base_options import AbstractOptionsProvider
 from stockfeed.providers.finnhub.normalizer import FinnhubNormalizer
+from stockfeed.providers.finnhub.options_normalizer import FinnhubOptionsNormalizer
 
 _BASE_URL = "https://finnhub.io/api/v1"
 
@@ -70,7 +74,7 @@ def _raise_for_status(
     resp.raise_for_status()
 
 
-class FinnhubProvider(AbstractProvider):
+class FinnhubProvider(AbstractProvider, AbstractOptionsProvider):
     """Data provider backed by the Finnhub REST API.
 
     Attributes
@@ -87,9 +91,11 @@ class FinnhubProvider(AbstractProvider):
     supported_intervals = _SUPPORTED
     requires_auth = True
 
-    def __init__(self, api_key: str = "") -> None:
+    def __init__(self, api_key: str = "", risk_free_rate: Decimal = Decimal("0.05")) -> None:
         self._api_key = api_key
+        self._risk_free_rate = risk_free_rate
         self._normalizer = FinnhubNormalizer()
+        self._options_normalizer = FinnhubOptionsNormalizer(risk_free_rate=self._risk_free_rate)
 
     # ------------------------------------------------------------------
     # HTTP client helpers
@@ -201,6 +207,43 @@ class FinnhubProvider(AbstractProvider):
         )
 
     # ------------------------------------------------------------------
+    # Options (sync)
+    # ------------------------------------------------------------------
+
+    def get_option_expirations(self, ticker: str) -> list[date]:
+        raise NotImplementedError("Finnhub does not provide an option expirations endpoint")
+
+    def get_options_chain(self, ticker: str, expiration: date) -> OptionChain:
+        with self._client() as client:
+            quote_resp = client.get("/quote", params=self._params({"symbol": ticker}))
+            _raise_for_status(quote_resp, ticker=ticker)
+            quote_data = quote_resp.json()
+
+            chain_resp = client.get("/stock/option-chain", params=self._params({"symbol": ticker}))
+            _raise_for_status(chain_resp, ticker=ticker)
+            chain_data = chain_resp.json()
+
+        underlying_price: Decimal | None = None
+        current_price = quote_data.get("c")
+        if current_price is not None:
+            try:
+                p = float(current_price)
+                if p > 0:
+                    underlying_price = Decimal(str(p))
+            except (TypeError, ValueError):
+                pass
+
+        return self._options_normalizer.normalize_chain(
+            underlying=ticker,
+            expiration=expiration,
+            raw=chain_data,
+            underlying_price=underlying_price,
+        )
+
+    def get_option_quote(self, symbol: str) -> OptionQuote:
+        raise NotImplementedError("Finnhub does not provide an option quote endpoint")
+
+    # ------------------------------------------------------------------
     # Async
     # ------------------------------------------------------------------
 
@@ -221,3 +264,12 @@ class FinnhubProvider(AbstractProvider):
 
     async def async_health_check(self) -> HealthStatus:
         return await asyncio.to_thread(self.health_check)
+
+    async def async_get_option_expirations(self, ticker: str) -> list[date]:
+        raise NotImplementedError("Finnhub does not provide an option expirations endpoint")
+
+    async def async_get_options_chain(self, ticker: str, expiration: date) -> OptionChain:
+        return await asyncio.to_thread(self.get_options_chain, ticker, expiration)
+
+    async def async_get_option_quote(self, symbol: str) -> OptionQuote:
+        raise NotImplementedError("Finnhub does not provide an option quote endpoint")
