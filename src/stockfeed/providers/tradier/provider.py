@@ -252,8 +252,9 @@ class TradierProvider(AbstractProvider, AbstractOptionsProvider):
                 "/v1/markets/options/expirations",
                 params={"symbol": ticker},
             )
-        _raise_for_status(resp, ticker=ticker)
-        return self._options_normalizer.normalize_expirations(resp.json())
+            _raise_for_status(resp, ticker=ticker)
+            data = resp.json()
+        return self._options_normalizer.normalize_expirations(data)
 
     def get_options_chain(self, ticker: str, expiration: date) -> OptionChain:
         """Return options chain for *ticker* at *expiration* with greeks."""
@@ -262,8 +263,9 @@ class TradierProvider(AbstractProvider, AbstractOptionsProvider):
                 "/v1/markets/options/chains",
                 params={"symbol": ticker, "expiration": expiration.isoformat(), "greeks": "true"},
             )
-        _raise_for_status(resp, ticker=ticker)
-        return self._options_normalizer.normalize_chain(ticker, expiration, resp.json())
+            _raise_for_status(resp, ticker=ticker)
+            data = resp.json()
+        return self._options_normalizer.normalize_chain(ticker, expiration, data)
 
     def get_option_quote(self, symbol: str) -> OptionQuote:
         """Return a live quote for the OCC option *symbol* with greeks."""
@@ -272,8 +274,9 @@ class TradierProvider(AbstractProvider, AbstractOptionsProvider):
                 "/v1/markets/options/quotes",
                 params={"symbols": symbol, "greeks": "true"},
             )
-        _raise_for_status(resp, ticker=symbol)
-        return self._options_normalizer.normalize_option_quote(symbol, resp.json())
+            _raise_for_status(resp, ticker=symbol)
+            data = resp.json()
+        return self._options_normalizer.normalize_option_quote(symbol, data)
 
     # ------------------------------------------------------------------
     # Options (async)
