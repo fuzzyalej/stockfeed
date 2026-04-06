@@ -45,3 +45,53 @@
 ::: stockfeed.models.response.StockFeedResponse
     options:
       show_root_heading: true
+
+---
+
+## Options models
+
+### GreeksSource
+
+::: stockfeed.models.options.GreeksSource
+    options:
+      show_root_heading: true
+
+---
+
+### Greeks
+
+::: stockfeed.models.options.Greeks
+    options:
+      show_root_heading: true
+
+---
+
+### OptionType
+
+::: stockfeed.models.options.OptionType
+    options:
+      show_root_heading: true
+
+---
+
+### OptionContract
+
+::: stockfeed.models.options.OptionContract
+    options:
+      show_root_heading: true
+
+---
+
+### OptionChain
+
+::: stockfeed.models.options.OptionChain
+    options:
+      show_root_heading: true
+
+---
+
+### OptionQuote
+
+::: stockfeed.models.options.OptionQuote
+    options:
+      show_root_heading: true
