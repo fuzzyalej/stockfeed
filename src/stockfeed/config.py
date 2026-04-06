@@ -1,5 +1,6 @@
 """Configuration system for stockfeed using pydantic-settings."""
 
+from decimal import Decimal
 from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -27,3 +28,6 @@ class StockFeedSettings(BaseSettings):
     # Logging
     log_level: str = "INFO"
     log_format: Literal["json", "console"] = "console"
+
+    # Options pricing
+    options_risk_free_rate: Decimal = Decimal("0.05")
