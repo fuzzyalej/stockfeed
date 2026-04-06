@@ -16,6 +16,7 @@ Unified market data access for Python — stocks, futures, options, and crypto.
 - **Cache-first** — all requests check DuckDB first; on a miss, data is fetched, stored, and returned
 - **Dual interface** — `StockFeedClient` (sync) and `AsyncStockFeedClient` (async) with identical method surfaces
 - **Canonical models** — every provider returns the same `OHLCVBar`, `Quote`, and `TickerInfo` types
+- **Options data** — expiration dates, full options chains, and per-contract quotes with greeks (delta, gamma, theta, vega, rho); greeks come from the provider API where available, or are calculated via Black-Scholes
 - **Both adjusted and raw prices** — `OHLCVBar.close_raw` and `OHLCVBar.close_adj` are always separate fields
 - **Streaming** — `AsyncStockFeedClient.stream_quote()` polls a provider and yields live `Quote` objects
 - **Dev simulator** — `AsyncStockFeedClient.simulate()` replays historical bars as a real-time stream for backtesting
@@ -129,6 +130,33 @@ async def main():
 asyncio.run(main())
 ```
 
+### Options data
+
+```python
+from datetime import date
+from stockfeed import StockFeedClient
+
+client = StockFeedClient()
+
+# List available expiration dates
+expirations = client.get_option_expirations("AAPL")
+print(expirations[:3])  # [date(2024, 1, 19), date(2024, 2, 16), ...]
+
+# Fetch the options chain for a specific expiration
+chain = client.get_options_chain("AAPL", expirations[0])
+for contract in chain.contracts[:5]:
+    print(
+        contract.symbol,
+        contract.option_type,
+        contract.strike,
+        contract.greeks.delta if contract.greeks else "—",
+    )
+
+# Quote a specific contract
+quote = client.get_option_quote("AAPL240119C00150000")
+print(quote.bid, quote.ask, quote.implied_volatility)
+```
+
 ### Cache management CLI
 
 ```bash
@@ -150,6 +178,8 @@ STOCKFEED_ALPACA_API_KEY=your_key
 STOCKFEED_ALPACA_SECRET_KEY=your_secret
 STOCKFEED_TRADIER_API_KEY=your_key
 STOCKFEED_COINGECKO_API_KEY=your_key   # optional — free tier works without it
+
+STOCKFEED_OPTIONS_RISK_FREE_RATE=0.05  # used for Black-Scholes greek calculation
 
 STOCKFEED_CACHE_PATH=~/.stockfeed/cache.db
 STOCKFEED_CACHE_ENABLED=true
@@ -184,15 +214,15 @@ Both string values and the `Interval` enum are accepted everywhere:
 
 ## Provider support matrix
 
-| Provider | OHLCV | Quote | Ticker info | Health | Auth required |
-|---|---|---|---|---|---|
-| `yfinance` | ✅ | ✅ | ✅ | ✅ | No |
-| `tiingo` | ✅ | ✅ | ✅ | ✅ | Yes |
-| `finnhub` | ✅ | ✅ | ✅ | ✅ | Yes |
-| `twelvedata` | ✅ | ✅ | ✅ | ✅ | Yes |
-| `alpaca` | ✅ | ✅ | ✅ | ✅ | Yes |
-| `tradier` | ✅ | ✅ | via yfinance | ✅ | Yes |
-| `coingecko` | 🔜 | 🔜 | 🔜 | 🔜 | Optional |
+| Provider | OHLCV | Quote | Ticker info | Health | Expirations | Chain | Option quote | Greeks | Auth required |
+|---|---|---|---|---|---|---|---|---|---|
+| `yfinance` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | Calculated (BS) | No |
+| `tiingo` | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | — | Yes |
+| `finnhub` | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ | Calculated (BS) | Yes |
+| `twelvedata` | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | — | Yes |
+| `alpaca` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | API greeks | Yes |
+| `tradier` | ✅ | ✅ | via yfinance | ✅ | ✅ | ✅ | ✅ | API greeks | Yes |
+| `coingecko` | 🔜 | 🔜 | 🔜 | 🔜 | ❌ | ❌ | ❌ | — | Optional |
 
 Providers without API keys configured are skipped during auto-selection. `yfinance` is always the final fallback.
 

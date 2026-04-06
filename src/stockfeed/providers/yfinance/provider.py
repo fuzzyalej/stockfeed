@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+import re
 import time
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
+from decimal import Decimal
 
 import yfinance as yf
 
@@ -12,10 +14,28 @@ from stockfeed.exceptions import ProviderUnavailableError, TickerNotFoundError
 from stockfeed.models.health import HealthStatus
 from stockfeed.models.interval import Interval
 from stockfeed.models.ohlcv import OHLCVBar
+from stockfeed.models.options import OptionChain, OptionQuote
 from stockfeed.models.quote import Quote
 from stockfeed.models.ticker import TickerInfo
 from stockfeed.providers.base import AbstractProvider
+from stockfeed.providers.base_options import AbstractOptionsProvider
 from stockfeed.providers.yfinance.normalizer import YFinanceNormalizer
+from stockfeed.providers.yfinance.options_normalizer import YFinanceOptionsNormalizer
+
+
+def _parse_occ_symbol(symbol: str) -> tuple[str, date, str]:
+    """Parse OCC symbol into (underlying, expiration, type_char).
+
+    OCC format: <UNDERLYING><YYMMDD><C|P><strike*1000 zero-padded to 8 digits>
+    Examples: AAPL240119C00150000, SPY240315P00420000
+    """
+    m = re.match(r"^([A-Z]+)(\d{6})([CP])(\d{8})$", symbol.upper())
+    if not m:
+        raise ValueError(f"Cannot parse OCC symbol: {symbol!r}")
+    underlying, date_str, opt_type, _ = m.groups()
+    exp = date(2000 + int(date_str[:2]), int(date_str[2:4]), int(date_str[4:6]))
+    return underlying, exp, opt_type
+
 
 # Map Interval enum values to yfinance interval strings
 _INTERVAL_MAP: dict[Interval, str] = {
@@ -31,7 +51,7 @@ _INTERVAL_MAP: dict[Interval, str] = {
 }
 
 
-class YFinanceProvider(AbstractProvider):
+class YFinanceProvider(AbstractProvider, AbstractOptionsProvider):
     """Data provider backed by the ``yfinance`` Python library.
 
     yfinance requires no API key and is always available as the
@@ -51,8 +71,9 @@ class YFinanceProvider(AbstractProvider):
     supported_intervals = list(Interval)
     requires_auth = False
 
-    def __init__(self) -> None:
+    def __init__(self, risk_free_rate: Decimal = Decimal("0.05")) -> None:
         self._normalizer = YFinanceNormalizer()
+        self._options_normalizer = YFinanceOptionsNormalizer(risk_free_rate=risk_free_rate)
 
     # ------------------------------------------------------------------
     # Sync
@@ -190,6 +211,84 @@ class YFinanceProvider(AbstractProvider):
             checked_at=datetime.now(timezone.utc),
             rate_limit_remaining=None,
         )
+
+    # ------------------------------------------------------------------
+    # Options (sync)
+    # ------------------------------------------------------------------
+
+    def get_option_expirations(self, ticker: str) -> list[date]:
+        """Return available expiration dates for *ticker*."""
+        try:
+            t = yf.Ticker(ticker)
+            return self._options_normalizer.normalize_expirations(t.options)
+        except Exception as exc:
+            raise ProviderUnavailableError(
+                f"yfinance failed fetching expirations for {ticker}: {exc}",
+                provider="yfinance",
+                ticker=ticker,
+            ) from exc
+
+    def get_options_chain(self, ticker: str, expiration: date) -> OptionChain:
+        """Return calls and puts for *ticker* at *expiration*."""
+        try:
+            t = yf.Ticker(ticker)
+            fast = t.fast_info
+            price = getattr(fast, "last_price", None) or getattr(fast, "lastPrice", None) or 0
+            underlying_price = Decimal(str(price))
+            chain = t.option_chain(expiration.isoformat())
+        except Exception as exc:
+            raise ProviderUnavailableError(
+                f"yfinance failed fetching options chain for {ticker}: {exc}",
+                provider="yfinance",
+                ticker=ticker,
+            ) from exc
+        return self._options_normalizer.normalize_chain(
+            underlying=ticker,
+            expiration=expiration,
+            calls_df=chain.calls,
+            puts_df=chain.puts,
+            underlying_price=underlying_price,
+        )
+
+    def get_option_quote(self, symbol: str) -> OptionQuote:
+        """Return a live quote for the OCC option *symbol*."""
+        try:
+            underlying, expiration, opt_type_char = _parse_occ_symbol(symbol)
+            t = yf.Ticker(underlying)
+            chain = t.option_chain(expiration.isoformat())
+            df = chain.calls if opt_type_char == "C" else chain.puts
+            row = df[df["contractSymbol"] == symbol]
+            if row.empty:
+                raise TickerNotFoundError(
+                    f"Option symbol {symbol} not found in yfinance chain",
+                    provider="yfinance",
+                    ticker=symbol,
+                )
+            return self._options_normalizer.normalize_option_quote(symbol, row.iloc[0], underlying)
+        except (TickerNotFoundError, ProviderUnavailableError):
+            raise
+        except Exception as exc:
+            raise ProviderUnavailableError(
+                f"yfinance failed fetching option quote for {symbol}: {exc}",
+                provider="yfinance",
+                ticker=symbol,
+            ) from exc
+
+    # ------------------------------------------------------------------
+    # Options (async)
+    # ------------------------------------------------------------------
+
+    async def async_get_option_expirations(self, ticker: str) -> list[date]:
+        """Async variant of :meth:`get_option_expirations`."""
+        return await asyncio.to_thread(self.get_option_expirations, ticker)
+
+    async def async_get_options_chain(self, ticker: str, expiration: date) -> OptionChain:
+        """Async variant of :meth:`get_options_chain`."""
+        return await asyncio.to_thread(self.get_options_chain, ticker, expiration)
+
+    async def async_get_option_quote(self, symbol: str) -> OptionQuote:
+        """Async variant of :meth:`get_option_quote`."""
+        return await asyncio.to_thread(self.get_option_quote, symbol)
 
     # ------------------------------------------------------------------
     # Async (run sync methods in thread pool to avoid blocking event loop)

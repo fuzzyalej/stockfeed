@@ -38,6 +38,7 @@ pip install stockfeed
 - [Getting Started](getting-started.md) — first OHLCV call, configure providers, understand responses
 - [Configuration](configuration.md) — all settings, API keys, cache tuning
 - [Providers](providers/overview.md) — which providers support what, and how to set them up
+- [Options data](options.md) — expiration calendars, chains, quotes, and greeks
 - [Streaming](streaming.md) — live quote streaming with `stream_quote()`
 - [Dev Tools](dev-tools.md) — simulator, cache CLI, backtesting workflow
 - [API Reference](api-reference/client.md) — full method signatures and docstrings
