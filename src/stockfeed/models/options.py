@@ -25,6 +25,7 @@ class OptionType(str, Enum):
 
 
 class OptionContract(BaseModel):
+    # OCC symbol (e.g. AAPL240119C00150000) — differs from ticker; encodes expiry, type, strike
     symbol: str
     underlying: str
     expiration: date
@@ -39,12 +40,19 @@ class OptionContract(BaseModel):
     greeks: Greeks | None
     provider: str
 
+    @field_validator("symbol")
+    @classmethod
+    def symbol_must_not_be_empty(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("symbol must not be empty")
+        return v.upper()
+
     @field_validator("underlying")
     @classmethod
     def underlying_uppercase(cls, v: str) -> str:
         if not v.strip():
             raise ValueError("underlying must not be empty")
-        return v.upper()
+        return v.strip().upper()
 
 
 class OptionChain(BaseModel):
@@ -57,6 +65,7 @@ class OptionChain(BaseModel):
 class OptionQuote(BaseModel):
     symbol: str
     underlying: str
+    timestamp: datetime
     bid: Decimal | None
     ask: Decimal | None
     last: Decimal | None
@@ -64,5 +73,11 @@ class OptionQuote(BaseModel):
     open_interest: int | None
     implied_volatility: Decimal | None
     greeks: Greeks | None
-    timestamp: datetime
     provider: str
+
+    @field_validator("symbol")
+    @classmethod
+    def symbol_must_not_be_empty(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("symbol must not be empty")
+        return v.upper()
