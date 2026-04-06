@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+import re
 import time
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
+from decimal import Decimal
 
 import httpx
 
@@ -17,10 +19,15 @@ from stockfeed.exceptions import (
 from stockfeed.models.health import HealthStatus
 from stockfeed.models.interval import Interval
 from stockfeed.models.ohlcv import OHLCVBar
+from stockfeed.models.options import OptionChain, OptionQuote
 from stockfeed.models.quote import Quote
 from stockfeed.models.ticker import TickerInfo
 from stockfeed.providers.alpaca.normalizer import AlpacaNormalizer
+from stockfeed.providers.alpaca.options_normalizer import AlpacaOptionsNormalizer
 from stockfeed.providers.base import AbstractProvider
+from stockfeed.providers.base_options import AbstractOptionsProvider
+
+_OCC_UNDERLYING_RE = re.compile(r"^([A-Z]+)\d{6}[CP]\d{8}$")
 
 _BASE_URL = "https://data.alpaca.markets"
 
@@ -69,7 +76,7 @@ def _raise_for_status(
     resp.raise_for_status()
 
 
-class AlpacaProvider(AbstractProvider):
+class AlpacaProvider(AbstractProvider, AbstractOptionsProvider):
     """Data provider backed by the Alpaca Markets Data API.
 
     Attributes
@@ -86,10 +93,17 @@ class AlpacaProvider(AbstractProvider):
     supported_intervals = list(_TIMEFRAME_MAP.keys())
     requires_auth = True
 
-    def __init__(self, api_key: str = "", secret_key: str = "") -> None:
+    def __init__(
+        self,
+        api_key: str = "",
+        secret_key: str = "",
+        risk_free_rate: Decimal = Decimal("0.05"),
+    ) -> None:
         self._api_key = api_key
         self._secret_key = secret_key
+        self._risk_free_rate = risk_free_rate
         self._normalizer = AlpacaNormalizer()
+        self._options_normalizer = AlpacaOptionsNormalizer(risk_free_rate=self._risk_free_rate)
 
     # ------------------------------------------------------------------
     # HTTP client helpers
@@ -211,6 +225,70 @@ class AlpacaProvider(AbstractProvider):
         )
 
     # ------------------------------------------------------------------
+    # Options — sync
+    # ------------------------------------------------------------------
+
+    def get_option_expirations(self, ticker: str) -> list[date]:
+        """Return unique, sorted expiration dates available for *ticker*."""
+        all_contracts: list[dict] = []
+        params: dict[str, object] = {
+            "underlying_symbols": ticker,
+            "limit": 1000,
+        }
+        with self._client() as client:
+            while True:
+                resp = client.get("/v1beta1/options/contracts", params=params)
+                _raise_for_status(resp, ticker=ticker)
+                body = resp.json()
+                all_contracts.extend(body.get("option_contracts") or [])
+                next_token = body.get("next_page_token")
+                if not next_token:
+                    break
+                params = dict(params)
+                params["page_token"] = next_token
+        return self._options_normalizer.normalize_expirations({"option_contracts": all_contracts})
+
+    def get_options_chain(self, ticker: str, expiration: date) -> OptionChain:
+        """Return all contracts for *ticker* at *expiration*."""
+        merged_snapshots: dict[str, object] = {}
+        params: dict[str, object] = {
+            "expiration_date": expiration.isoformat(),
+            "limit": 1000,
+            "feed": "indicative",
+        }
+        with self._client() as client:
+            while True:
+                resp = client.get(f"/v1beta1/options/snapshots/{ticker}", params=params)
+                _raise_for_status(resp, ticker=ticker)
+                body = resp.json()
+                snapshots = body.get("snapshots") or {}
+                merged_snapshots.update(snapshots)
+                next_token = body.get("next_page_token")
+                if not next_token:
+                    break
+                params = dict(params)
+                params["page_token"] = next_token
+        return self._options_normalizer.normalize_chain(ticker, expiration, merged_snapshots)
+
+    def get_option_quote(self, symbol: str) -> OptionQuote:
+        """Return a live quote for the OCC option *symbol*."""
+        m = _OCC_UNDERLYING_RE.match(symbol)
+        if not m:
+            raise ValueError(f"Cannot parse OCC symbol: {symbol!r}")
+        underlying = m.group(1)
+        params: dict[str, object] = {
+            "symbols": symbol,
+            "feed": "indicative",
+        }
+        with self._client() as client:
+            resp = client.get(f"/v1beta1/options/snapshots/{underlying}", params=params)
+            _raise_for_status(resp, ticker=underlying)
+            body = resp.json()
+        snapshots = body.get("snapshots") or {}
+        snapshot = snapshots.get(symbol, {})
+        return self._options_normalizer.normalize_option_quote(symbol, snapshot)
+
+    # ------------------------------------------------------------------
     # Async
     # ------------------------------------------------------------------
 
@@ -231,3 +309,12 @@ class AlpacaProvider(AbstractProvider):
 
     async def async_health_check(self) -> HealthStatus:
         return await asyncio.to_thread(self.health_check)
+
+    async def async_get_option_expirations(self, ticker: str) -> list[date]:
+        return await asyncio.to_thread(self.get_option_expirations, ticker)
+
+    async def async_get_options_chain(self, ticker: str, expiration: date) -> OptionChain:
+        return await asyncio.to_thread(self.get_options_chain, ticker, expiration)
+
+    async def async_get_option_quote(self, symbol: str) -> OptionQuote:
+        return await asyncio.to_thread(self.get_option_quote, symbol)
