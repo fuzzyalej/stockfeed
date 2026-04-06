@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import time
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
+from decimal import Decimal
 
 import httpx
 
@@ -17,10 +18,13 @@ from stockfeed.exceptions import (
 from stockfeed.models.health import HealthStatus
 from stockfeed.models.interval import Interval
 from stockfeed.models.ohlcv import OHLCVBar
+from stockfeed.models.options import OptionChain, OptionQuote
 from stockfeed.models.quote import Quote
 from stockfeed.models.ticker import TickerInfo
 from stockfeed.providers.base import AbstractProvider
+from stockfeed.providers.base_options import AbstractOptionsProvider
 from stockfeed.providers.tradier.normalizer import TradierNormalizer
+from stockfeed.providers.tradier.options_normalizer import TradierOptionsNormalizer
 
 _BASE_URL = "https://api.tradier.com"
 
@@ -76,7 +80,7 @@ def _raise_for_status(
     resp.raise_for_status()
 
 
-class TradierProvider(AbstractProvider):
+class TradierProvider(AbstractProvider, AbstractOptionsProvider):
     """Data provider backed by the Tradier REST API.
 
     Attributes
@@ -99,9 +103,10 @@ class TradierProvider(AbstractProvider):
     supported_intervals = _SUPPORTED
     requires_auth = True
 
-    def __init__(self, api_key: str = "") -> None:
+    def __init__(self, api_key: str = "", risk_free_rate: Decimal = Decimal("0.05")) -> None:
         self._api_key = api_key
         self._normalizer = TradierNormalizer()
+        self._options_normalizer = TradierOptionsNormalizer(risk_free_rate=risk_free_rate)
 
     # ------------------------------------------------------------------
     # HTTP client helpers
@@ -235,3 +240,53 @@ class TradierProvider(AbstractProvider):
 
     async def async_health_check(self) -> HealthStatus:
         return await asyncio.to_thread(self.health_check)
+
+    # ------------------------------------------------------------------
+    # Options (sync)
+    # ------------------------------------------------------------------
+
+    def get_option_expirations(self, ticker: str) -> list[date]:
+        """Return available expiration dates for *ticker*."""
+        with self._client() as client:
+            resp = client.get(
+                "/v1/markets/options/expirations",
+                params={"symbol": ticker},
+            )
+        _raise_for_status(resp, ticker=ticker)
+        return self._options_normalizer.normalize_expirations(resp.json())
+
+    def get_options_chain(self, ticker: str, expiration: date) -> OptionChain:
+        """Return options chain for *ticker* at *expiration* with greeks."""
+        with self._client() as client:
+            resp = client.get(
+                "/v1/markets/options/chains",
+                params={"symbol": ticker, "expiration": expiration.isoformat(), "greeks": "true"},
+            )
+        _raise_for_status(resp, ticker=ticker)
+        return self._options_normalizer.normalize_chain(ticker, expiration, resp.json())
+
+    def get_option_quote(self, symbol: str) -> OptionQuote:
+        """Return a live quote for the OCC option *symbol* with greeks."""
+        with self._client() as client:
+            resp = client.get(
+                "/v1/markets/options/quotes",
+                params={"symbols": symbol, "greeks": "true"},
+            )
+        _raise_for_status(resp, ticker=symbol)
+        return self._options_normalizer.normalize_option_quote(symbol, resp.json())
+
+    # ------------------------------------------------------------------
+    # Options (async)
+    # ------------------------------------------------------------------
+
+    async def async_get_option_expirations(self, ticker: str) -> list[date]:
+        """Async variant of :meth:`get_option_expirations`."""
+        return await asyncio.to_thread(self.get_option_expirations, ticker)
+
+    async def async_get_options_chain(self, ticker: str, expiration: date) -> OptionChain:
+        """Async variant of :meth:`get_options_chain`."""
+        return await asyncio.to_thread(self.get_options_chain, ticker, expiration)
+
+    async def async_get_option_quote(self, symbol: str) -> OptionQuote:
+        """Async variant of :meth:`get_option_quote`."""
+        return await asyncio.to_thread(self.get_option_quote, symbol)

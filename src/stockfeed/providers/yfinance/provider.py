@@ -233,7 +233,7 @@ class YFinanceProvider(AbstractProvider, AbstractOptionsProvider):
         try:
             t = yf.Ticker(ticker)
             fast = t.fast_info
-            price = fast.get("lastPrice") or fast.get("last_price") or 0
+            price = getattr(fast, "last_price", None) or getattr(fast, "lastPrice", None) or 0
             underlying_price = Decimal(str(price))
             chain = t.option_chain(expiration.isoformat())
         except Exception as exc:
