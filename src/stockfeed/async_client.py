@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import AsyncGenerator
-from datetime import datetime
+from datetime import date, datetime
 
 import stockfeed.providers as _providers_module  # noqa: F401 — triggers auto-registration
 from stockfeed._utils import parse_dt, parse_interval
@@ -19,9 +19,11 @@ from stockfeed.exceptions import (
 from stockfeed.models.health import HealthStatus
 from stockfeed.models.interval import Interval
 from stockfeed.models.ohlcv import OHLCVBar
+from stockfeed.models.options import OptionChain, OptionQuote
 from stockfeed.models.quote import Quote
 from stockfeed.models.ticker import TickerInfo
 from stockfeed.providers.health import HealthChecker
+from stockfeed.providers.options_selector import OptionsProviderSelector
 from stockfeed.providers.rate_limiter import RateLimiter
 from stockfeed.providers.registry import get_default_registry
 from stockfeed.providers.selector import ProviderSelector
@@ -60,6 +62,12 @@ class AsyncStockFeedClient:
         self._health_checker = HealthChecker(db_path=self._db_path)
         self._market_hours = MarketHoursChecker()
         self._selector = ProviderSelector(
+            registry=get_default_registry(),
+            rate_limiter=self._rate_limiter,
+            health_checker=self._health_checker,
+            settings=self.settings,
+        )
+        self._options_selector = OptionsProviderSelector(
             registry=get_default_registry(),
             rate_limiter=self._rate_limiter,
             health_checker=self._health_checker,
@@ -209,6 +217,86 @@ class AsyncStockFeedClient:
             if instance is not None:
                 results[name] = await instance.async_health_check()
         return results
+
+    # ------------------------------------------------------------------
+    # Options
+    # ------------------------------------------------------------------
+
+    async def get_option_expirations(self, ticker: str, provider: str | None = None) -> list[date]:
+        """Async variant of :meth:`~stockfeed.client.StockFeedClient.get_option_expirations`.
+
+        Parameters
+        ----------
+        ticker : str
+            Uppercase ticker symbol (underlying).
+        provider : str | None
+            Pin a specific options provider. ``None`` means auto-select.
+        """
+        last_exc: Exception | None = None
+        for p in self._options_selector.select(preferred=provider):
+            try:
+                return await p.async_get_option_expirations(ticker)
+            except (ProviderRateLimitError, ProviderUnavailableError) as exc:
+                last_exc = exc
+            except (ProviderAuthError, TickerNotFoundError):
+                raise
+            except NotImplementedError:
+                continue
+        raise ProviderUnavailableError(
+            f"No options provider could return expirations for {ticker}", ticker=ticker
+        ) from last_exc
+
+    async def get_options_chain(
+        self, ticker: str, expiration: date, provider: str | None = None
+    ) -> OptionChain:
+        """Async variant of :meth:`~stockfeed.client.StockFeedClient.get_options_chain`.
+
+        Parameters
+        ----------
+        ticker : str
+            Uppercase ticker symbol (underlying).
+        expiration : date
+            Expiration date.
+        provider : str | None
+            Pin a specific options provider. ``None`` means auto-select.
+        """
+        last_exc: Exception | None = None
+        for p in self._options_selector.select(preferred=provider):
+            try:
+                return await p.async_get_options_chain(ticker, expiration)
+            except (ProviderRateLimitError, ProviderUnavailableError) as exc:
+                last_exc = exc
+            except (ProviderAuthError, TickerNotFoundError):
+                raise
+            except NotImplementedError:
+                continue
+        raise ProviderUnavailableError(
+            f"No options provider could return chain for {ticker} {expiration}", ticker=ticker
+        ) from last_exc
+
+    async def get_option_quote(self, symbol: str, provider: str | None = None) -> OptionQuote:
+        """Async variant of :meth:`~stockfeed.client.StockFeedClient.get_option_quote`.
+
+        Parameters
+        ----------
+        symbol : str
+            OCC option symbol (e.g. ``"AAPL240119C00150000"``).
+        provider : str | None
+            Pin a specific options provider. ``None`` means auto-select.
+        """
+        last_exc: Exception | None = None
+        for p in self._options_selector.select(preferred=provider):
+            try:
+                return await p.async_get_option_quote(symbol)
+            except (ProviderRateLimitError, ProviderUnavailableError) as exc:
+                last_exc = exc
+            except (ProviderAuthError, TickerNotFoundError):
+                raise
+            except NotImplementedError:
+                continue
+        raise ProviderUnavailableError(
+            f"No options provider could return quote for {symbol}"
+        ) from last_exc
 
     # ------------------------------------------------------------------
     # Streaming
