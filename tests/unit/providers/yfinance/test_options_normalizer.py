@@ -123,3 +123,53 @@ def test_normalize_chain_underlying_uppercase(normalizer, sample_calls_df):
     )
     assert chain.underlying == "AAPL"
     assert all(c.underlying == "AAPL" for c in chain.contracts)
+
+
+def test_normalize_option_quote_happy_path(normalizer):
+    """normalize_option_quote returns a populated OptionQuote."""
+    from unittest.mock import MagicMock
+
+    row = MagicMock()
+    row.get = lambda key, default=None: {
+        "bid": 1.50,
+        "ask": 1.55,
+        "lastPrice": 1.52,
+        "volume": 100.0,
+        "openInterest": 500.0,
+        "impliedVolatility": 0.25,
+    }.get(key, default)
+
+    quote = normalizer.normalize_option_quote(
+        symbol="AAPL260701C00150000",
+        row=row,
+        underlying="aapl",
+    )
+    assert quote.symbol == "AAPL260701C00150000"
+    assert quote.underlying == "AAPL"
+    assert quote.bid == Decimal("1.5")
+    assert quote.ask == Decimal("1.55")
+    assert quote.provider == "yfinance"
+    assert quote.greeks is None  # greeks always None in quote (no price context)
+
+
+def test_normalize_option_quote_nan_iv(normalizer):
+    """NaN IV in a quote should still return a valid OptionQuote with greeks=None."""
+    from unittest.mock import MagicMock
+
+    row = MagicMock()
+    row.get = lambda key, default=None: {
+        "bid": 1.50,
+        "ask": 1.55,
+        "lastPrice": 1.52,
+        "volume": 100.0,
+        "openInterest": 500.0,
+        "impliedVolatility": float("nan"),
+    }.get(key, default)
+
+    quote = normalizer.normalize_option_quote(
+        symbol="AAPL260701C00150000",
+        row=row,
+        underlying="AAPL",
+    )
+    assert quote.implied_volatility is None
+    assert quote.greeks is None

@@ -146,7 +146,7 @@ class YFinanceOptionsNormalizer:
             return None
         try:
             f = float(value)
-            if math.isnan(f):
+            if math.isnan(f) or math.isinf(f):
                 return None
             return int(f)
         except (TypeError, ValueError):
